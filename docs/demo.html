@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>デモ | エイサー道ジュネーなう 読谷村</title>
+  <meta name="description" content="読谷村の実際の地図上で、青年会の道ジュネーが動く様子を体験できるシミュレーションデモ">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥁</text></svg>">
+  <style>
+    /* デモページ専用のスタイル */
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .app-header { flex: 0 0 auto; }
+    .app-main { flex: 1 1 auto; height: auto; min-height: 0; }
+
+    .demo-bar {
+      flex: 0 0 auto;
+      background: #2d2a26;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      font-size: 12px;
+      position: relative;
+      z-index: 1150;
+    }
+    .demo-chip {
+      background: var(--color-accent);
+      color: #5c3a00;
+      font-weight: 700;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .demo-clock { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+    #demo-note { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .demo-controls { display: flex; gap: 6px; margin-left: auto; }
+    .btn-demo {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .btn-demo:hover { background: rgba(255, 255, 255, 0.25); }
+    @media (max-width: 480px) {
+      .demo-bar { flex-wrap: wrap; row-gap: 4px; }
+      #demo-note { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-title">
+      <span class="header-emoji">🥁</span>
+      <div>
+        <h1>エイサー道ジュネーなう 読谷村</h1>
+        <p class="day-indicator">シミュレーションデモ — 旧盆ナカビの夜を再現</p>
+      </div>
+    </div>
+    <button id="btn-toggle-list" class="btn-icon" title="青年会リスト">📋</button>
+  </header>
+
+  <div class="demo-bar">
+    <span class="demo-chip">デモ再生中</span>
+    <span class="demo-clock" id="demo-clock">19:00</span>
+    <span id="demo-note">読谷村の6団体が自動で練り歩きます</span>
+    <div class="demo-controls">
+      <button id="btn-play" class="btn-demo" title="再生/一時停止">⏸ 一時停止</button>
+      <button id="btn-speed" class="btn-demo" title="再生速度">×2</button>
+      <button id="btn-reset" class="btn-demo" title="最初から">↺</button>
+      <a href="index.html" class="btn-demo" title="本番アプリへ">アプリへ</a>
+    </div>
+  </div>
+
+  <main class="app-main">
+    <div id="map"></div>
+
+    <aside id="panel-list" class="panel hidden">
+      <div class="panel-header">
+        <h2>青年会一覧</h2>
+        <button class="btn-close" data-close="panel-list">✕</button>
+      </div>
+      <div class="panel-filters">
+        <select id="filter-region">
+          <option value="">すべての地域</option>
+        </select>
+        <label class="checkbox-label">
+          <input type="checkbox" id="filter-active">
+          道ジュネー中のみ
+        </label>
+      </div>
+      <ul id="kai-list" class="kai-list"></ul>
+    </aside>
+
+    <button id="btn-report" class="btn-fab" title="現在地を報告">📍 位置を報告</button>
+  </main>
+
+  <!-- 位置報告モーダル(デモ体験用) -->
+  <div id="modal-report" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="panel-header">
+        <h2>道ジュネーの位置を報告(体験)</h2>
+        <button class="btn-close" data-close="modal-report">✕</button>
+      </div>
+      <form id="form-report">
+        <label>
+          青年会
+          <select id="report-kai" required>
+            <option value="" disabled selected>選択してください</option>
+          </select>
+        </label>
+        <label>
+          状況
+          <select id="report-status">
+            <option value="parading">🥁 道ジュネー中</option>
+            <option value="preparing">🏮 準備中</option>
+            <option value="resting">🍵 休憩中</option>
+            <option value="finished">🌙 本日終了</option>
+          </select>
+        </label>
+        <label>
+          ひとこと(任意)
+          <input type="text" id="report-comment" maxlength="60" placeholder="例: 公民館前を出発しました!">
+        </label>
+        <div class="location-picker">
+          <p class="location-status" id="location-status">位置が未設定です(デモでは地図タップで指定します)</p>
+          <div class="location-buttons">
+            <button type="button" id="btn-pick-map" class="btn-secondary">🗺️ 地図をタップして指定</button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="btn-submit-report" disabled>報告する</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="pick-guide" class="pick-guide hidden">
+    地図をタップして位置を指定
+    <button id="btn-cancel-pick" class="btn-small">キャンセル</button>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/demo.js"></script>
+</body>
+</html>
