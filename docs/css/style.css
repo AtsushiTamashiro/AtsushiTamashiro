@@ -1,0 +1,408 @@
+:root {
+  --color-primary: #c53030;      /* 沖縄の赤瓦をイメージ */
+  --color-primary-dark: #9b2222;
+  --color-accent: #f6ad55;       /* 提灯のオレンジ */
+  --color-bg: #fffaf3;
+  --color-text: #2d2a26;
+  --color-muted: #8a8378;
+  --color-parading: #e53e3e;
+  --color-preparing: #dd8b1e;
+  --color-resting: #3182ce;
+  --color-finished: #718096;
+  --color-stale: #a0aec0;
+  --header-height: 56px;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+.hidden { display: none !important; }
+
+/* ---------- ヘッダー ---------- */
+.app-header {
+  height: var(--header-height);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  box-shadow: var(--shadow);
+  position: relative;
+  z-index: 1200;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-emoji { font-size: 28px; }
+
+.app-header h1 {
+  font-size: 16px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-indicator {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.btn-icon {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  font-size: 20px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.btn-icon:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* ---------- モードバナー ---------- */
+.mode-banner {
+  background: #fef3cd;
+  color: #7a5c00;
+  font-size: 12px;
+  padding: 6px 12px;
+  text-align: center;
+  border-bottom: 1px solid #f0e0a0;
+  position: relative;
+  z-index: 1100;
+}
+
+/* ---------- メイン ---------- */
+.app-main {
+  position: relative;
+  height: calc(100% - var(--header-height));
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+/* ---------- パネル(青年会リスト) ---------- */
+.panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 320px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.panel-header h2 { font-size: 15px; margin: 0; }
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--color-muted);
+  padding: 4px 8px;
+}
+
+.panel-filters {
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.panel-filters select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.checkbox-label {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kai-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.kai-item {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f0ea;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.kai-item:hover { background: #fdf6ec; }
+
+.kai-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kai-info { min-width: 0; flex: 1; }
+
+.kai-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kai-meta {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- FAB ---------- */
+.btn-fab {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  z-index: 1000;
+}
+.btn-fab:hover { background: var(--color-primary-dark); }
+
+/* ---------- モーダル ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal {
+  background: #fff;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px 16px 0 0;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modal select, .modal input[type="text"] {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.location-picker {
+  background: #faf5eb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.location-status {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.location-status.ok { color: #276749; font-weight: 600; }
+
+.location-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-secondary {
+  background: #fff;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 140px;
+}
+.btn-secondary:hover { background: #fdf0ee; }
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* ---------- 地図タップ指定ガイド ---------- */
+.pick-guide {
+  position: fixed;
+  top: calc(var(--header-height) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-text);
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13px;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+
+.btn-small {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ---------- マーカー ---------- */
+.eisa-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -100%);
+}
+
+.eisa-marker .marker-pin {
+  width: 38px;
+  height: 38px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  border: 2px solid #fff;
+}
+
+.eisa-marker .marker-pin span {
+  transform: rotate(45deg);
+  font-size: 18px;
+}
+
+.eisa-marker .marker-label {
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.marker-parading .marker-pin { background: var(--color-parading); animation: pulse 1.6s infinite; }
+.marker-preparing .marker-pin { background: var(--color-preparing); }
+.marker-resting .marker-pin { background: var(--color-resting); }
+.marker-finished .marker-pin { background: var(--color-finished); }
+.marker-stale .marker-pin { background: var(--color-stale); animation: none; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 0 0 0 rgba(229, 62, 62, 0.5); }
+  50% { box-shadow: 0 2px 6px rgba(0,0,0,.35), 0 0 0 10px rgba(229, 62, 62, 0); }
+}
+
+/* ---------- ポップアップ ---------- */
+.popup-kai h3 { margin: 0 0 4px; font-size: 15px; }
+.popup-kai .popup-region { color: var(--color-muted); font-size: 11px; margin: 0 0 6px; }
+.popup-kai .popup-status { font-weight: 700; font-size: 13px; margin: 0 0 4px; }
+.popup-kai .popup-comment {
+  background: #faf5eb;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  margin: 6px 0;
+}
+.popup-kai .popup-time { color: var(--color-muted); font-size: 11px; margin: 0; }
+
+/* ---------- デスクトップ ---------- */
+@media (min-width: 720px) {
+  .app-header h1 { font-size: 20px; }
+  .day-indicator { font-size: 12px; }
+  .modal-overlay { align-items: center; }
+  .modal { border-radius: 16px; }
+}
