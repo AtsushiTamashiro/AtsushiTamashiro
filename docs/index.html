@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>エイサー道ジュネーなう | 沖縄旧盆 道ジュネー現在地マップ</title>
+  <meta name="description" content="沖縄の旧盆3日間、各地域の青年会が行う道ジュネー(エイサーの練り歩き)の現在地をリアルタイムで共有・閲覧できるマップアプリ">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥁</text></svg>">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-title">
+      <span class="header-emoji">🥁</span>
+      <div>
+        <h1>エイサー道ジュネーなう</h1>
+        <p id="day-indicator" class="day-indicator"></p>
+      </div>
+    </div>
+    <button id="btn-toggle-list" class="btn-icon" title="青年会リスト">📋</button>
+  </header>
+
+  <div id="mode-banner" class="mode-banner hidden"></div>
+
+  <main class="app-main">
+    <div id="map"></div>
+
+    <!-- 青年会リスト(サイドパネル / モバイルはボトムシート) -->
+    <aside id="panel-list" class="panel hidden">
+      <div class="panel-header">
+        <h2>青年会一覧</h2>
+        <button class="btn-close" data-close="panel-list">✕</button>
+      </div>
+      <div class="panel-filters">
+        <select id="filter-region">
+          <option value="">すべての地域</option>
+        </select>
+        <label class="checkbox-label">
+          <input type="checkbox" id="filter-active" checked>
+          道ジュネー中のみ
+        </label>
+      </div>
+      <ul id="kai-list" class="kai-list"></ul>
+    </aside>
+
+    <!-- 位置報告ボタン -->
+    <button id="btn-report" class="btn-fab" title="現在地を報告">📍 位置を報告</button>
+  </main>
+
+  <!-- 位置報告モーダル -->
+  <div id="modal-report" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="panel-header">
+        <h2>道ジュネーの位置を報告</h2>
+        <button class="btn-close" data-close="modal-report">✕</button>
+      </div>
+      <form id="form-report">
+        <label>
+          青年会
+          <select id="report-kai" required>
+            <option value="" disabled selected>選択してください</option>
+          </select>
+        </label>
+        <label>
+          状況
+          <select id="report-status">
+            <option value="parading">🥁 道ジュネー中</option>
+            <option value="preparing">🏮 準備中</option>
+            <option value="resting">🍵 休憩中</option>
+            <option value="finished">🌙 本日終了</option>
+          </select>
+        </label>
+        <label>
+          ひとこと(任意)
+          <input type="text" id="report-comment" maxlength="60" placeholder="例: ○○通りを北へ移動中!">
+        </label>
+        <div class="location-picker">
+          <p class="location-status" id="location-status">位置が未設定です</p>
+          <div class="location-buttons">
+            <button type="button" id="btn-gps" class="btn-secondary">📡 GPSで現在地取得</button>
+            <button type="button" id="btn-pick-map" class="btn-secondary">🗺️ 地図をタップして指定</button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="btn-submit-report" disabled>報告する</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 地図タップ指定中のガイド -->
+  <div id="pick-guide" class="pick-guide hidden">
+    地図をタップして位置を指定してください
+    <button id="btn-cancel-pick" class="btn-small">キャンセル</button>
+  </div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <!-- Firebase を使う場合は firebase-config.js を用意(README参照)。無い場合はデモモードで動作 -->
+  <script src="firebase-config.js" onerror="void 0"></script>
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
