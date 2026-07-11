@@ -1,32 +1,33 @@
 /**
- * 青年会マスタデータ
- * baseLat / baseLng は各字(あざ)のおおよその位置。
+ * 青年会マスタデータ(読谷村)
+ * baseLat / baseLng は各字(あざ)のおおよその位置(公民館周辺を想定した概算値)。
  * 実際の道ジュネー現在地は報告データで上書きされ、ここは初期表示にのみ使う。
- * 青年会の追加・修正はこの配列を編集する。
+ * 青年会の追加・座標の修正はこの配列を編集する。
  */
 const KAI_LIST = [
-  // 沖縄市
-  { id: "sonda",      name: "園田青年会",   region: "沖縄市",   baseLat: 26.3346, baseLng: 127.8090 },
-  { id: "goeku",      name: "越来青年会",   region: "沖縄市",   baseLat: 26.3438, baseLng: 127.7998 },
-  { id: "yamazato",   name: "山里青年会",   region: "沖縄市",   baseLat: 26.3271, baseLng: 127.7871 },
-  { id: "moromizato", name: "諸見里青年会", region: "沖縄市",   baseLat: 26.3222, baseLng: 127.7925 },
-  { id: "kubota",     name: "久保田青年会", region: "沖縄市",   baseLat: 26.3178, baseLng: 127.7950 },
-  { id: "murokawa",   name: "室川青年会",   region: "沖縄市",   baseLat: 26.3405, baseLng: 127.8123 },
+  // 北部(残波・長浜方面)
+  { id: "tokeshi",   name: "渡慶次青年会", region: "読谷村北部", baseLat: 26.4180, baseLng: 127.7195 },
+  { id: "gima",      name: "儀間青年会",   region: "読谷村北部", baseLat: 26.4225, baseLng: 127.7160 },
+  { id: "uza",       name: "宇座青年会",   region: "読谷村北部", baseLat: 26.4290, baseLng: 127.7180 },
+  { id: "senaha",    name: "瀬名波青年会", region: "読谷村北部", baseLat: 26.4230, baseLng: 127.7280 },
+  { id: "nagahama",  name: "長浜青年会",   region: "読谷村北部", baseLat: 26.4300, baseLng: 127.7330 },
 
-  // うるま市
-  { id: "heshikiya",  name: "平敷屋青年会", region: "うるま市", baseLat: 26.3122, baseLng: 127.8950 },
-  { id: "yakena",     name: "屋慶名青年会", region: "うるま市", baseLat: 26.3712, baseLng: 127.9730 },
-  { id: "agena",      name: "安慶名青年会", region: "うるま市", baseLat: 26.3792, baseLng: 127.8570 },
-  { id: "taba",       name: "田場青年会",   region: "うるま市", baseLat: 26.3720, baseLng: 127.8500 },
-  { id: "akano",      name: "赤野青年会",   region: "うるま市", baseLat: 26.3660, baseLng: 127.8330 },
+  // 中部(波平・喜名・座喜味方面)
+  { id: "namihira",  name: "波平青年会",   region: "読谷村中部", baseLat: 26.3970, baseLng: 127.7290 },
+  { id: "takashiho", name: "高志保青年会", region: "読谷村中部", baseLat: 26.4105, baseLng: 127.7230 },
+  { id: "toya",      name: "都屋青年会",   region: "読谷村中部", baseLat: 26.3900, baseLng: 127.7270 },
+  { id: "zakimi",    name: "座喜味青年会", region: "読谷村中部", baseLat: 26.4075, baseLng: 127.7415 },
+  { id: "kina",      name: "喜名青年会",   region: "読谷村中部", baseLat: 26.4090, baseLng: 127.7500 },
+  { id: "oyashi",    name: "親志青年会",   region: "読谷村中部", baseLat: 26.4180, baseLng: 127.7560 },
 
-  // 那覇市・南部
-  { id: "kokuba",     name: "国場青年会",   region: "那覇市・南部", baseLat: 26.1963, baseLng: 127.6940 },
-  { id: "teratcho",   name: "汀良町青年会", region: "那覇市・南部", baseLat: 26.2220, baseLng: 127.7270 },
-
-  // 浦添市・宜野湾市
-  { id: "uchima",     name: "内間青年会",   region: "浦添市・宜野湾市", baseLat: 26.2520, baseLng: 127.7200 },
-  { id: "isahama",    name: "伊佐浜青年会", region: "浦添市・宜野湾市", baseLat: 26.2810, baseLng: 127.7440 },
+  // 南部(楚辺・古堅方面)
+  { id: "sobe",      name: "楚辺青年会",   region: "読谷村南部", baseLat: 26.3810, baseLng: 127.7350 },
+  { id: "ooki",      name: "大木青年会",   region: "読谷村南部", baseLat: 26.3860, baseLng: 127.7450 },
+  { id: "iramina",   name: "伊良皆青年会", region: "読谷村南部", baseLat: 26.3880, baseLng: 127.7520 },
+  { id: "oowan",     name: "大湾青年会",   region: "読谷村南部", baseLat: 26.3730, baseLng: 127.7440 },
+  { id: "furugen",   name: "古堅青年会",   region: "読谷村南部", baseLat: 26.3690, baseLng: 127.7480 },
+  { id: "hija",      name: "比謝青年会",   region: "読谷村南部", baseLat: 26.3670, baseLng: 127.7400 },
+  { id: "toguchi",   name: "渡具知青年会", region: "読谷村南部", baseLat: 26.3620, baseLng: 127.7380 },
 ];
 
 /** 報告状況の定義 */
@@ -50,5 +51,5 @@ const KYUBON_DAYS = [
 /** 位置報告がこの時間(分)を超えて古い場合、マーカーをグレー表示にする */
 const STALE_MINUTES = 60;
 
-/** 地図の初期表示(沖縄本島中部) */
-const MAP_DEFAULT = { lat: 26.32, lng: 127.81, zoom: 12 };
+/** 地図の初期表示(読谷村役場周辺) */
+const MAP_DEFAULT = { lat: 26.3965, lng: 127.7375, zoom: 13 };
