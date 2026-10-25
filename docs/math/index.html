@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>かずブロックのさんすうランド</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=M+PLUS+Rounded+1c:wght@500;800&display=swap">
+<style>
+/* Layout: a kids' TV studio set: sunburst sky, cartoon panels with thick ink outlines and hard drop shadows, a "screen" stage where the blocks act out each problem, big bubbly answer buttons below */
+:root{
+  --sky:#7FD3FF;
+  --ray:#9FE0FF;
+  --paper:#FFFFFF;
+  --ink:#221A3F;
+  --ink-soft:#5B5480;
+  --sun:#FFD23F;
+  --red:#FF4D4D;
+  --blue:#2E9BFF;
+  --green:#2FC46A;
+  --muted:#E6E9F2;
+  --display:"Fredoka","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",system-ui,sans-serif;
+  --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  --c:clamp(16px,4.6vw,30px);
+  --line:4px solid var(--ink);
+  --drop:5px 5px 0 var(--ink);
+  --outline:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink),0 3px 0 var(--ink),3px 0 0 var(--ink),-3px 0 0 var(--ink),0 -2px 0 var(--ink),4px 5px 0 var(--ink);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--body);font-weight:500;
+  color:var(--ink);
+  background-color:var(--sky);
+  background-image:repeating-conic-gradient(from 0deg at 50% -8%,var(--sky) 0 7.5deg,var(--ray) 7.5deg 15deg);
+  background-attachment:fixed;
+  overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-offset:3px}
+
+.app{
+  max-width:780px;margin:0 auto;min-height:100%;
+  display:flex;flex-direction:column;gap:18px;
+  padding-block:14px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.screen{display:flex;flex-direction:column;gap:18px;flex:1}
+.panel{background:var(--paper);border:var(--line);border-radius:26px;box-shadow:var(--drop)}
+.en{font-family:var(--display);font-weight:700;letter-spacing:.02em}
+
+/* ---------- block buddies ---------- */
+.bud{position:relative;display:inline-flex;flex-direction:column;align-items:center}
+.bud .grid{display:grid;grid-auto-flow:column;grid-auto-columns:var(--c);gap:2px;transform:scaleY(-1)}
+.cube{
+  --col:#ccc;
+  position:relative;width:var(--c);height:var(--c);
+  transform:scaleY(-1);
+  background:var(--col);
+  border:2px solid var(--ink);
+  border-radius:calc(var(--c)*.22);
+  box-shadow:inset 0 calc(var(--c)*-.13) 0 rgba(0,0,0,.14),inset 0 calc(var(--c)*.1) 0 rgba(255,255,255,.45);
+}
+.cube.white{box-shadow:inset 0 0 0 calc(var(--c)*.08) var(--red),inset 0 calc(var(--c)*-.16) 0 rgba(0,0,0,.1)}
+.cube.ghost{background:transparent;border:2px dashed var(--ink-soft);box-shadow:none;opacity:.6}
+.cube.face::before{
+  content:"";position:absolute;left:16%;right:16%;top:22%;height:34%;
+  background:
+    radial-gradient(circle at 25% 50%,#fff 0 calc(var(--c)*.12),transparent calc(var(--c)*.13)),
+    radial-gradient(circle at 75% 50%,#fff 0 calc(var(--c)*.12),transparent calc(var(--c)*.13));
+}
+.cube.face .eyes{
+  position:absolute;left:16%;right:16%;top:22%;height:34%;
+  background:
+    radial-gradient(circle at 28% 56%,var(--ink) 0 calc(var(--c)*.065),transparent calc(var(--c)*.075)),
+    radial-gradient(circle at 78% 56%,var(--ink) 0 calc(var(--c)*.065),transparent calc(var(--c)*.075));
+}
+.cube.face::after{
+  content:"";position:absolute;left:32%;width:36%;top:58%;height:18%;
+  border:2px solid var(--ink);border-top:0;border-radius:0 0 999px 999px;background:#FF8FA3;
+}
+.cube .num{
+  display:none;position:absolute;inset:0;place-items:center;
+  font-family:var(--display);font-weight:700;font-size:calc(var(--c)*.55);
+  color:var(--ink);text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;
+}
+.bud.hint .cube .num{display:grid}
+.bud.hint .cube.face::before,.bud.hint .cube.face::after,.bud.hint .cube .eyes{display:none}
+
+.mystery{
+  min-width:calc(var(--c)*2.4);height:calc(var(--c)*2.4);padding:0 8px;
+  display:grid;place-items:center;
+  border:4px dashed var(--ink);border-radius:20px;
+  font-family:var(--display);font-weight:700;font-size:calc(var(--c)*1.4);color:var(--ink);
+  background:var(--sun);
+  animation:wobble 2.2s ease-in-out infinite;
+}
+.mystery.filled{background:var(--col);border-style:solid;animation:none;color:#fff;text-shadow:var(--outline);box-shadow:var(--drop)}
+@keyframes wobble{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes hop{0%{transform:translateY(0) scale(1)}30%{transform:translateY(-22px) scale(1.06,.95)}60%{transform:translateY(0) scale(1.05,.92)}100%{transform:translateY(0) scale(1)}}
+@keyframes popin{0%{transform:scale(.2) rotate(-12deg);opacity:0}70%{transform:scale(1.12) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.popin{animation:popin .45s cubic-bezier(.2,.9,.3,1.3) both}
+.hop{animation:hop .7s ease-out 2}
+
+/* ---------- home ---------- */
+.title{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px;position:relative}
+.ribbon{
+  font-family:var(--display);font-weight:700;font-size:clamp(14px,3.8vw,18px);letter-spacing:.14em;text-transform:uppercase;
+  background:var(--red);color:#fff;border:var(--line);border-radius:999px;padding:4px 18px;box-shadow:3px 3px 0 var(--ink);
+  transform:rotate(-2deg);
+}
+.tiles{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.tile{
+  width:clamp(40px,11vw,62px);height:clamp(40px,11vw,62px);
+  display:grid;place-items:center;border-radius:14px;
+  font-family:var(--body);font-weight:800;font-size:clamp(22px,6.6vw,36px);color:#fff;
+  text-shadow:var(--outline);
+  border:var(--line);box-shadow:4px 4px 0 var(--ink);
+  animation:popin .5s cubic-bezier(.2,.9,.3,1.3) both;
+}
+.tile:nth-child(odd){rotate:-4deg}
+.tile:nth-child(even){rotate:3deg}
+.tagline{margin:0;font-family:var(--display);font-weight:700;font-size:clamp(18px,5vw,24px);color:var(--ink)}
+
+.hello{display:flex;align-items:flex-end;justify-content:center;gap:14px}
+.speech{
+  position:relative;background:var(--paper);border:var(--line);border-radius:22px;box-shadow:var(--drop);
+  padding:10px 16px;font-weight:800;font-size:clamp(16px,4.4vw,20px);
+  max-width:min(70vw,380px);text-wrap:balance;margin-bottom:calc(var(--c)*1.3);
+}
+.speech .en{display:block;font-size:.85em;color:var(--blue)}
+.speech::after{
+  content:"";position:absolute;right:-15px;bottom:16px;width:20px;height:20px;
+  background:var(--paper);border-right:var(--line);border-top:var(--line);
+  transform:rotate(45deg) skew(10deg,10deg);
+}
+.namebox{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.namebox input{
+  font:inherit;font-size:18px;padding:8px 12px;border-radius:14px;border:var(--line);
+  width:min(220px,60vw);background:var(--paper);color:var(--ink);
+}
+
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (min-width:640px){.modes{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mode{
+  --col:#ccc;
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
+  background:var(--col);border:var(--line);border-radius:24px;box-shadow:var(--drop);
+  padding:12px 12px 14px;min-height:156px;position:relative;overflow:hidden;
+  transition:transform .12s,box-shadow .12s;
+}
+.mode:nth-child(odd){rotate:-1.2deg}
+.mode:nth-child(even){rotate:1.2deg}
+.mode:hover{transform:translateY(-3px)}
+.mode:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--ink)}
+.mode .men{font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:1px 9px}
+.mode .mlabel{font-weight:800;font-size:clamp(20px,5.4vw,25px);color:#fff;text-shadow:var(--outline);margin-top:4px}
+.mode .msub{font-size:14px;font-weight:800;background:rgba(255,255,255,.85);border-radius:8px;padding:0 6px}
+.mode .msample{font-family:var(--display);font-weight:700;font-size:19px;margin-top:auto;
+  background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:2px 10px}
+.mode .bud{position:absolute;right:12px;bottom:12px;--c:15px}
+.mode.mix{background:conic-gradient(from 45deg,#FF4D4D,#FF9A2E,#FFD23F,#2FC46A,#2E9BFF,#9B6BE0,#FF4D4D)}
+
+.shelf{padding:14px 14px 16px;display:flex;flex-direction:column;gap:12px}
+.shelf-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.shelf-head h2{margin:0;font-size:19px;font-weight:800;display:flex;flex-direction:column;line-height:1.15}
+.shelf-head h2 .en{font-size:13px;color:var(--blue);letter-spacing:.08em;text-transform:uppercase}
+.starcount{
+  font-family:var(--display);font-weight:700;font-size:18px;display:inline-flex;align-items:center;gap:4px;
+  font-variant-numeric:tabular-nums;background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:2px 12px 2px 6px;
+}
+.starcount svg{width:22px;height:22px}
+.chart{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px;padding:6px;background:var(--ink);border-radius:14px}
+.cell{
+  --col:var(--muted);
+  aspect-ratio:1;max-width:100%;position:relative;border:0;padding:0;border-radius:6px;
+  background:var(--col);display:grid;place-items:end center;
+  font-family:var(--display);font-weight:700;font-size:clamp(9px,2.5vw,14px);font-variant-numeric:tabular-nums;
+  color:#A3A8BE;
+}
+.cell.on{color:var(--ink);box-shadow:inset 0 -3px 0 rgba(0,0,0,.14)}
+.cell.on::before{
+  content:"";position:absolute;left:22%;right:22%;top:22%;height:22%;
+  background:radial-gradient(circle at 25% 50%,var(--ink) 0 18%,transparent 22%),radial-gradient(circle at 75% 50%,var(--ink) 0 18%,transparent 22%);
+}
+.cell.on span{background:rgba(255,255,255,.85);border-radius:4px;padding:0 2px;margin-bottom:8%;line-height:1.1}
+.cell.white{box-shadow:inset 0 0 0 2px var(--red)}
+.cell.new{outline:3px solid var(--sun);outline-offset:-1px;z-index:1}
+.cell.sel{outline:3px solid #fff;outline-offset:-1px;z-index:2}
+.cell:disabled{cursor:default}
+.detail{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;justify-content:center;--c:13px;min-height:60px}
+.detail .who{display:flex;flex-direction:column;gap:2px}
+.detail .who b{font-family:var(--display);font-size:34px;line-height:1}
+.detail .who .en{color:var(--blue);font-size:18px}
+.shelf p{margin:0;font-size:14px;color:var(--ink-soft);font-weight:800}
+
+.toggles{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  border:var(--line);background:var(--paper);border-radius:999px;padding:6px 14px;box-shadow:3px 3px 0 var(--ink);
+  font-weight:800;font-size:15px;
+}
+.toggle[aria-pressed="false"]{background:var(--muted);color:var(--ink-soft)}
+.toggle svg{width:18px;height:18px}
+
+/* ---------- quiz ---------- */
+.bar{display:flex;align-items:center;gap:10px}
+.back{
+  border:var(--line);background:var(--paper);border-radius:14px;box-shadow:3px 3px 0 var(--ink);
+  padding:5px 12px;font-weight:800;font-size:15px;flex-shrink:0;
+}
+.dots{display:flex;gap:4px;flex:1;justify-content:center;flex-wrap:wrap}
+.dot{width:18px;height:18px;border-radius:5px;background:var(--paper);border:3px solid var(--ink)}
+.dot.now{background:var(--sun);transform:scale(1.2) rotate(8deg)}
+.dot.star{background:var(--sun)}
+.dot.star::after{content:"";display:block;width:100%;height:100%;
+  background:radial-gradient(circle,var(--red) 0 30%,transparent 32%)}
+.dot.ok{background:#9EE6B9}
+
+.stage{padding:16px 12px 16px;display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;
+  background:
+    radial-gradient(circle,rgba(46,155,255,.12) 2px,transparent 2.5px) 0 0/18px 18px,
+    var(--paper);
+}
+.stage .qno{position:absolute;left:-6px;top:-14px;rotate:-6deg;
+  font-family:var(--display);font-weight:700;font-size:16px;background:var(--blue);color:#fff;text-shadow:var(--outline);
+  border:var(--line);border-radius:12px;padding:2px 12px;box-shadow:3px 3px 0 var(--ink)}
+.scene{
+  display:flex;align-items:flex-end;justify-content:center;gap:clamp(6px,2vw,14px);flex-wrap:wrap;
+  min-height:calc(var(--c)*5 + 24px);max-width:100%;
+}
+.scene.big{--c:clamp(14px,4vw,26px)}
+.op{font-family:var(--display);font-weight:700;font-size:calc(var(--c)*1.6);align-self:center;color:var(--ink);line-height:1}
+.groups{display:flex;gap:clamp(4px,1.6vw,10px);align-items:flex-end}
+.caption{font-weight:800;font-size:clamp(15px,4vw,18px);text-align:center;margin:-2px 0 0;
+  background:var(--sun);border:3px solid var(--ink);border-radius:999px;padding:2px 14px}
+.eq{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  font-family:var(--display);font-weight:700;font-size:clamp(30px,9vw,46px);line-height:1;
+}
+.chip{
+  --col:#ccc;min-width:1.4em;padding:.1em .28em;border-radius:.3em;text-align:center;
+  background:var(--col);color:#fff;text-shadow:var(--outline);
+  border:var(--line);box-shadow:4px 4px 0 var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.chip.white{box-shadow:inset 0 0 0 4px var(--red),4px 4px 0 var(--ink)}
+.chip.q{background:var(--paper);border-style:dashed;color:var(--ink);text-shadow:none}
+.eq .sym{color:var(--ink)}
+.say-en{margin:-4px 0 0;font-family:var(--display);font-weight:700;font-size:17px;color:var(--blue);text-align:center;min-height:1.3em}
+
+.message{min-height:2.6em;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.message .big{
+  font-family:var(--display);font-weight:700;font-size:clamp(30px,9vw,46px);line-height:1;
+  color:var(--sun);text-shadow:var(--outline);rotate:-3deg;
+}
+.message .ja{font-weight:800;font-size:clamp(16px,4.4vw,20px)}
+.message.oops .big{color:var(--red);font-size:clamp(26px,7.6vw,38px)}
+.message.oops .ja{background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:2px 12px}
+
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.choice{
+  --col:#ccc;
+  min-height:98px;border-radius:26px;border:var(--line);
+  background:var(--col);color:#fff;
+  font-family:var(--display);font-weight:700;font-size:clamp(38px,11.5vw,60px);
+  text-shadow:var(--outline);
+  box-shadow:inset 0 -8px 0 rgba(0,0,0,.16),inset 0 6px 0 rgba(255,255,255,.4),var(--drop);
+  transition:transform .1s,box-shadow .1s,opacity .2s;
+  font-variant-numeric:tabular-nums;
+}
+.choice.white{box-shadow:inset 0 0 0 6px var(--red),inset 0 -8px 0 rgba(0,0,0,.1),var(--drop)}
+.choice:active{transform:translate(4px,4px);box-shadow:inset 0 -8px 0 rgba(0,0,0,.16),1px 1px 0 var(--ink)}
+.choice.wrong{animation:shake .45s;opacity:.35;filter:grayscale(.9)}
+.choice.right{outline:6px solid var(--green);outline-offset:4px}
+.choice:disabled{cursor:default}
+
+/* ---------- result ---------- */
+.result{align-items:center;text-align:center;justify-content:center}
+.burst{position:relative;display:grid;place-items:center;width:min(300px,78vw);aspect-ratio:1;max-width:100%}
+.burst::before{
+  content:"";position:absolute;inset:0;
+  background:repeating-conic-gradient(var(--sun) 0 10deg,#FFB627 10deg 20deg);
+  clip-path:polygon(50% 0,61% 18%,80% 8%,79% 29%,98% 32%,85% 50%,98% 68%,79% 71%,80% 92%,61% 82%,50% 100%,39% 82%,20% 92%,21% 71%,2% 68%,15% 50%,2% 32%,21% 29%,20% 8%,39% 18%);
+  animation:spin 18s linear infinite;
+}
+.burst .inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px}
+.burst .big{font-family:var(--display);font-weight:700;font-size:clamp(34px,10vw,50px);line-height:1;color:#fff;text-shadow:var(--outline);rotate:-4deg}
+.burst .ja{font-weight:800;font-size:clamp(16px,4.6vw,21px);background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:2px 10px}
+.bigstars{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;max-width:440px}
+.bigstars svg{width:clamp(26px,7.5vw,36px);height:clamp(26px,7.5vw,36px)}
+.bigstars .off path{fill:var(--muted);stroke:#B9BED3}
+.score{font-family:var(--display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.newfriend{padding:14px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;--c:20px;max-width:100%}
+.newfriend b{font-size:18px;font-weight:800}
+.newfriend .en{color:var(--blue);font-size:16px}
+.newfriend .row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.actions{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.btn{
+  border:var(--line);border-radius:20px;padding:12px 24px;box-shadow:var(--drop);
+  font-weight:800;font-size:20px;background:var(--sun);color:var(--ink);
+  display:flex;flex-direction:column;line-height:1.15;
+}
+.btn .en{font-size:14px;color:var(--ink-soft)}
+.btn.ghostbtn{background:var(--paper)}
+.btn:active{transform:translate(4px,4px);box-shadow:1px 1px 0 var(--ink)}
+
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50;width:100%;height:100%}
+
+@media (max-width:480px){
+  .dots{gap:3px}
+  .dot{width:14px;height:14px;border-width:2px}
+}
+@media (max-width:380px){
+  .choice{min-height:86px}
+  .mode{min-height:144px;padding:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="app">
+
+  <!-- HOME -->
+  <section class="screen" id="home">
+    <div class="title">
+      <span class="ribbon">Math Blocks Show</span>
+      <div class="tiles" id="titleTiles" aria-label="かずブロックの さんすうランド"></div>
+      <p class="tagline">Let's count together!</p>
+    </div>
+
+    <div class="hello">
+      <div class="speech" id="greet"></div>
+      <div id="mascot"></div>
+    </div>
+    <div class="namebox" id="nameBox" hidden>
+      <input id="nameInput" maxlength="10" placeholder="なまえ（ひらがな）" autocomplete="off">
+      <button class="back" id="nameSave" type="button">きめた</button>
+    </div>
+
+    <div class="modes" id="modes"></div>
+
+    <div class="panel shelf">
+      <div class="shelf-head">
+        <h2><span class="en">My 100 Friends</span>あつめた なかま <span id="friendCount"></span></h2>
+        <span class="starcount"><span class="staricon"></span><span id="totalStars">0</span></span>
+      </div>
+      <div class="chart" id="chart"></div>
+      <div class="detail" id="detail"></div>
+      <p id="nextFriend"></p>
+    </div>
+
+    <div class="toggles">
+      <button class="toggle" id="sndToggle" type="button" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>
+        おと
+      </button>
+      <button class="toggle" id="voiceToggle" type="button" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H9l-5 4z"/></svg>
+        よみあげ
+      </button>
+      <button class="toggle" id="enToggle" type="button" aria-pressed="true">English</button>
+      <button class="toggle" id="nameToggle" type="button" aria-pressed="true">なまえ</button>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section class="screen" id="quiz" hidden>
+    <div class="bar">
+      <button class="back" id="quitBtn" type="button">もどる</button>
+      <div class="dots" id="dots"></div>
+      <span class="starcount"><span class="staricon"></span><span id="roundStars">0</span></span>
+    </div>
+
+    <div class="panel stage">
+      <span class="qno" id="qno">Q1</span>
+      <div class="scene" id="scene"></div>
+      <p class="caption" id="caption" hidden></p>
+      <div class="eq" id="eq" aria-live="polite"></div>
+      <p class="say-en" id="sayEn"></p>
+    </div>
+
+    <div class="message" id="msg" aria-live="polite"></div>
+    <div class="choices" id="choices"></div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="screen result" id="result" hidden>
+    <div class="burst"><div class="inner"><span class="big" id="resEn">Great Job!</span><span class="ja" id="resTitle">よく できました！</span></div></div>
+    <div class="bigstars" id="bigStars"></div>
+    <div class="score" id="resScore"></div>
+    <div id="resNew"></div>
+    <div class="actions">
+      <button class="btn" id="againBtn" type="button">もういちど<span class="en">Play again</span></button>
+      <button class="btn ghostbtn" id="menuBtn" type="button">メニューへ<span class="en">Menu</span></button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // ---------- colors: one hue per digit, 7 is a rainbow, tens are white with red edges ----------
+  const COL = {1:'#FF4D4D',2:'#FF9A2E',3:'#FFD23F',4:'#2FC46A',5:'#2EB8F0',6:'#9B6BE0',8:'#F06BB0',9:'#9AA6B4',10:'#FFFFFF'};
+  const RAINBOW = ['#FF4D4D','#FF9A2E','#FFD23F','#2FC46A','#2EB8F0','#4F6BE0','#9B6BE0'];
+  const RAINBOW_BG = 'linear-gradient(135deg,#FF4D4D,#FF9A2E,#FFD23F,#2FC46A,#2EB8F0,#9B6BE0)';
+  const base = n => (n > 10 ? (n % 10 || 10) : n);
+  const mainColor = n => n === 0 ? '#E6E9F2' : base(n) === 7 ? '#2FC46A' : COL[base(n)];
+  function cubeColor(n, i){
+    if (n <= 10) return n === 7 ? RAINBOW[i] : COL[n];
+    const ones = n % 10, tensCubes = n - ones;
+    if (i < tensCubes) return COL[10];
+    return ones === 7 ? RAINBOW[i - tensCubes] : COL[ones];
+  }
+  function paint(elm, n){
+    elm.style.setProperty('--col', mainColor(n));
+    if (base(n) === 7 && n > 0) elm.style.background = RAINBOW_BG;
+    if (base(n) === 10 && n > 0) elm.classList.add('white');
+  }
+
+  const ONES = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+  const TENS = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+  function word(n){
+    if (n === 100) return 'one hundred';
+    if (n < 20) return ONES[n];
+    return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+  }
+
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // A block buddy: n cubes stacked in towers (5 high up to 20, 10 high beyond), face on top of the first tower.
+  function bud(n, {ghost = 0, hint = false, start = 1, same = 0, face = true, tower = 0} = {}){
+    const wrap = el('div', 'bud');
+    const g = el('div', 'grid');
+    const rows = Math.max(1, Math.min(n, tower || (n <= 20 ? 5 : 10)));
+    g.style.gridTemplateRows = `repeat(${rows}, var(--c))`;
+    for (let i = 0; i < n; i++){
+      const c = el('div', 'cube');
+      const col = cubeColor(n, i);
+      c.style.setProperty('--col', col);
+      if (col === COL[10]) c.classList.add('white');
+      const gone = i >= n - ghost;
+      if (gone) c.classList.add('ghost');
+      if (face && i === rows - 1 && !gone){ c.classList.add('face'); c.append(el('span', 'eyes')); }
+      c.append(el('span', 'num', gone ? '' : String(same || start + i)));
+      g.append(c);
+    }
+    wrap.append(g);
+    if (hint) wrap.classList.add('hint');
+    return wrap;
+  }
+
+  const STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z" fill="#FFD23F" stroke="#221A3F" stroke-width="2" stroke-linejoin="round"/></svg>';
+  document.querySelectorAll('.staricon').forEach(s => { s.innerHTML = STAR_SVG; s.style.display = 'inline-flex'; });
+
+  // ---------- storage (per-device, optional) ----------
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem('kazublock:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v){ try { localStorage.setItem('kazublock:' + k, JSON.stringify(v)); } catch {} }
+  };
+  let totalStars = store.get('stars', 0);
+  let soundOn = store.get('sound', true);
+  let voiceOn = store.get('voice', true);
+  let englishOn = store.get('english', true);
+  let kidName = store.get('name', '');
+  const MAX_FRIENDS = 100;
+  const STARS_PER_FRIEND = 3;
+  const friendsFor = stars => Math.min(MAX_FRIENDS, Math.floor(stars / STARS_PER_FRIEND));
+  let selectedFriend = 0, freshFriends = new Set();
+
+  // ---------- sound ----------
+  let ac = null;
+  function audio(){
+    if (!soundOn) return null;
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch { ac = null; }
+    return ac;
+  }
+  function tone(f, t0, dur, type = 'triangle', vol = .14){
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = f;
+    const t = a.currentTime + t0;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  const sfx = {
+    tap(){ tone(880, 0, .06, 'sine', .06); },
+    good(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .08, .22)); },
+    oops(){ tone(392, 0, .16, 'sine', .1); tone(311, .14, .26, 'sine', .1); },
+    fanfare(){ [523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .13, .24, 'square', .05)); }
+  };
+
+  // ---------- voice: Japanese first, then an English line ----------
+  let jaVoice = null, enVoice = null;
+  function loadVoice(){
+    try {
+      const vs = speechSynthesis.getVoices();
+      jaVoice = vs.find(v => /^ja/i.test(v.lang)) || null;
+      enVoice = vs.find(v => /^en-US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+    } catch {}
+  }
+  try { loadVoice(); speechSynthesis.onvoiceschanged = loadVoice; } catch {}
+  function utter(text, lang, voice){
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; if (voice) u.voice = voice;
+    u.rate = lang === 'ja-JP' ? .9 : .85; u.pitch = 1.25;
+    speechSynthesis.speak(u);
+  }
+  function say(ja, en){
+    if (!voiceOn) return;
+    try {
+      speechSynthesis.cancel();
+      if (ja) utter(ja, 'ja-JP', jaVoice);
+      if (en && englishOn) utter(en, 'en-US', enVoice);
+    } catch {}
+  }
+
+  // ---------- confetti ----------
+  const cv = $('confetti'), cx = cv.getContext('2d');
+  let parts = [], raf = 0;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function confetti(count = 60){
+    if (reduced) return;
+    cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio;
+    const colors = RAINBOW.concat(['#F06BB0', '#FFFFFF']);
+    for (let i = 0; i < count; i++){
+      parts.push({x: innerWidth * (.2 + Math.random() * .6), y: innerHeight * .45, vx: (Math.random() - .5) * 12, vy: -6 - Math.random() * 9,
+        s: 9 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: pick(colors), star: Math.random() < .3, life: 0});
+    }
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function tick(){
+    const d = devicePixelRatio;
+    cx.clearRect(0, 0, cv.width, cv.height);
+    parts = parts.filter(p => p.y < innerHeight + 40 && p.life < 220);
+    for (const p of parts){
+      p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+      cx.save(); cx.translate(p.x * d, p.y * d); cx.rotate(p.r);
+      cx.fillStyle = p.c; cx.strokeStyle = '#221A3F'; cx.lineWidth = 2 * d;
+      const s = p.s * d;
+      if (p.star){
+        cx.beginPath();
+        for (let k = 0; k < 10; k++){ const rr = k % 2 ? s * .25 : s * .6, a = k * Math.PI / 5; cx.lineTo(Math.sin(a) * rr, -Math.cos(a) * rr); }
+        cx.closePath(); cx.fill(); cx.stroke();
+      } else { cx.fillRect(-s / 2, -s / 2, s, s); cx.strokeRect(-s / 2, -s / 2, s, s); }
+      cx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(tick) : 0;
+    if (!raf) cx.clearRect(0, 0, cv.width, cv.height);
+  }
+
+  // ---------- modes ----------
+  const gens = {
+    add10(){ const s = rand(2, 10), a = rand(1, s - 1); return {op: '+', a, b: s - a, ans: s}; },
+    add20(){ const a = rand(2, 10), b = rand(Math.max(1, 11 - a), 10); return {op: '+', a, b, ans: a + b}; },
+    sub10(){ const a = rand(2, 10), b = rand(1, a - 1); return {op: '−', a, b, ans: a - b}; },
+    mul5(){ const a = rand(1, 5), b = rand(1, 5); return {op: '×', a, b, ans: a * b}; },
+    mul10(){ const a = rand(6, 10), b = rand(1, 10); return {op: '×', a, b, ans: a * b}; },
+    div5(){ const b = rand(2, 5), ans = rand(1, 5); return {op: '÷', a: b * ans, b, ans}; },
+    div10(){ const b = rand(6, 10), ans = rand(1, 10); return {op: '÷', a: b * ans, b, ans}; }
+  };
+  const MODES = {
+    add10: {label: 'たしざん', en: 'Addition', sub: 'こたえが 10まで', icon: 3, sample: '3 + 4', gen: gens.add10},
+    add20: {label: 'たしざん', en: 'Addition', sub: 'こたえが 20まで', icon: 5, sample: '8 + 6', gen: gens.add20},
+    sub10: {label: 'ひきざん', en: 'Subtraction', sub: '10までの かず', icon: 4, sample: '7 − 2', gen: gens.sub10},
+    mul5:  {label: 'かけざん', en: 'Times 1–5', sub: '1〜5の だん', icon: 6, sample: '2 × 3', gen: gens.mul5},
+    mul10: {label: 'かけざん', en: 'Times 6–10', sub: '6〜10の だん', icon: 8, sample: '7 × 4', gen: gens.mul10},
+    div5:  {label: 'わりざん', en: 'Division ÷2–5', sub: '2〜5で わる', icon: 2, sample: '6 ÷ 2', gen: gens.div5},
+    div10: {label: 'わりざん', en: 'Division ÷6–10', sub: '6〜10で わる', icon: 1, sample: '24 ÷ 6', gen: gens.div10},
+    mix:   {label: 'ごちゃまぜ', en: 'Mix It Up', sub: 'いろいろ でるよ', icon: 7, sample: '? ? ?', mix: true,
+      gen(){ return pick([gens.add10, gens.add20, gens.sub10, gens.mul5, gens.div5])(); }}
+  };
+  const SPOKEN = {'+': 'たす', '−': 'ひく', '×': 'かける', '÷': 'わる'};
+  const SPOKEN_EN = {'+': 'plus', '−': 'minus', '×': 'times', '÷': 'divided by'};
+  const PRAISE = [['Great job!', 'せいかい！'], ['Awesome!', 'すごい！'], ['You did it!', 'やったね！'], ['Super!', 'ばっちり！'], ['Amazing!', 'てんさい！'], ['Perfect!', 'かんぺき！']];
+  const ROUND = 10;
+
+  let state = null;
+
+  function choicesFor(q){
+    const opts = new Set([q.ans]);
+    const near = [q.ans + 1, q.ans - 1, q.ans + 2, q.ans - 2];
+    const extra = q.op === '×' ? [q.a * (q.b + 1), q.a * (q.b - 1), (q.a + 1) * q.b, (q.a - 1) * q.b, q.a + q.b] : [q.ans + 3, q.ans - 3];
+    const pool = shuffle(q.op === '×' ? extra.concat(near) : near.concat(extra));
+    for (const n of pool){ if (opts.size >= 3) break; if (n >= (q.op === '−' ? 0 : 1) && n <= 100) opts.add(n); }
+    let k = 1; while (opts.size < 3) opts.add(q.ans + k++);
+    return shuffle([...opts]);
+  }
+
+  function chip(n){ const c = el('span', 'chip', String(n)); paint(c, n); return c; }
+
+  function renderScene(hint){
+    const q = state.q, sc = $('scene');
+    sc.replaceChildren();
+    sc.classList.toggle('big', (q.op === '×' && q.a > 5) || (q.op === '÷' && q.a > 25));
+    const cap = $('caption'); cap.hidden = true;
+    if (q.op === '+'){
+      sc.append(bud(q.a, {hint}), el('span', 'op', '+'), bud(q.b, {hint, start: q.a + 1}));
+    } else if (q.op === '−'){
+      sc.append(bud(q.a, {hint, ghost: q.b}));
+      cap.hidden = false; cap.textContent = `${q.a}こ から ${q.b}こ ばいばい`;
+    } else if (q.op === '÷'){
+      // Before a mistake: the whole pile and the group size. On a hint or once solved: the pile regrouped, each group numbered.
+      if (hint || state.solved){
+        const gr = el('div', 'groups');
+        for (let k = 0; k < q.ans; k++) gr.append(bud(q.b, {hint, same: k + 1, tower: q.b}));
+        sc.append(gr);
+      } else sc.append(bud(q.a), el('span', 'op', '÷'), bud(q.b));
+      cap.hidden = false;
+      cap.textContent = state.solved ? `${q.b}こずつ ${q.ans}つ できたね`
+        : hint ? `${q.b}こずつ まとめたよ。いくつ できたかな？`
+        : `${q.a}こを ${q.b}こずつ わけると いくつ？`;
+    } else {
+      const gr = el('div', 'groups');
+      for (let k = 0; k < q.b; k++) gr.append(bud(q.a, {hint, start: k * q.a + 1, tower: q.a > 5 ? q.a : 5}));
+      sc.append(gr);
+      cap.hidden = false; cap.textContent = `${q.a} が ${q.b}こ ぶん`;
+    }
+    sc.append(el('span', 'op', '='));
+    if (state.solved){
+      let ans;
+      if (q.op === '×' || q.op === '÷' || q.ans === 0){ ans = el('div', 'mystery filled', String(q.ans)); paint(ans, q.ans); }
+      else ans = bud(q.ans);
+      ans.classList.add('popin'); sc.append(ans);
+      requestAnimationFrame(() => ans.classList.add('hop'));
+    } else sc.append(el('div', 'mystery', '?'));
+  }
+
+  function renderEq(){
+    const q = state.q, eq = $('eq');
+    eq.replaceChildren(chip(q.a), el('span', 'sym', q.op), chip(q.b), el('span', 'sym', '='));
+    if (state.solved) { const c = chip(q.ans); c.classList.add('popin'); eq.append(c); }
+    else eq.append(el('span', 'chip q', '?'));
+    $('sayEn').textContent = !englishOn ? '' : state.solved
+      ? `${word(q.a)} ${SPOKEN_EN[q.op]} ${word(q.b)} is ${word(q.ans)}!`
+      : `${word(q.a)} ${SPOKEN_EN[q.op]} ${word(q.b)} is…?`;
+  }
+
+  function renderDots(){
+    const d = $('dots'); d.replaceChildren();
+    for (let i = 0; i < ROUND; i++){
+      const dot = el('span', 'dot');
+      if (i < state.results.length) dot.classList.add(state.results[i] ? 'star' : 'ok');
+      else if (i === state.i) dot.classList.add('now');
+      d.append(dot);
+    }
+    $('roundStars').textContent = state.stars;
+    $('qno').textContent = `Q${Math.min(state.solved ? state.i : state.i + 1, ROUND)}`;
+  }
+
+  function setMsg(kind, big, ja){
+    const m = $('msg'); m.className = 'message ' + kind; m.replaceChildren();
+    if (big) m.append(el('span', 'big', big));
+    if (ja) m.append(el('span', 'ja', ja));
+  }
+
+  function nextQuestion(){
+    if (state.i >= ROUND) return showResult();
+    let q, key, tries = 0;
+    do { q = MODES[state.mode].gen(); key = q.a + q.op + q.b; } while (state.used.has(key) && ++tries < 30);
+    state.used.add(key);
+    Object.assign(state, {q, solved: false, firstTry: true, locked: false});
+    renderScene(false); renderEq(); renderDots();
+    setMsg('', '', '');
+    const ch = $('choices'); ch.replaceChildren();
+    for (const n of choicesFor(q)){
+      const b = el('button', 'choice', String(n)); b.type = 'button'; paint(b, n);
+      b.addEventListener('click', () => answer(n, b));
+      ch.append(b);
+    }
+    say(`${q.a} ${SPOKEN[q.op]} ${q.b} は？`);
+  }
+
+  function answer(n, btn){
+    if (state.locked) return;
+    const q = state.q;
+    if (n === q.ans){
+      state.locked = true; state.solved = true;
+      if (state.firstTry) state.stars++;
+      state.results.push(state.firstTry);
+      btn.classList.add('right');
+      [...$('choices').children].forEach(b => b.disabled = true);
+      renderScene(false); renderEq();
+      const [en, ja] = state.firstTry ? pick(PRAISE) : ['Nice!', 'できたね！'];
+      setMsg('good', englishOn ? en : ja, englishOn ? ja : '');
+      sfx.good(); confetti(state.firstTry ? 50 : 24);
+      say(`${ja} こたえは ${q.ans}`, `${en} ${word(q.a)} ${SPOKEN_EN[q.op]} ${word(q.b)} is ${word(q.ans)}.`);
+      state.i++; renderDots();
+      state.timer = setTimeout(nextQuestion, englishOn && voiceOn ? 3200 : 2000);
+    } else {
+      state.firstTry = false;
+      btn.classList.add('wrong'); btn.disabled = true;
+      renderScene(true);
+      const tip = q.op === '−' ? 'のこった ブロックを かぞえてみよう' : q.op === '÷' ? 'まとまりを かぞえてみよう' : 'ブロックを かぞえてみよう';
+      setMsg('oops', englishOn ? 'So close!' : '', `おしい！ ${tip}`);
+      sfx.oops(); say(`おしい！ ${tip}`, 'So close! Let\'s count.');
+    }
+  }
+
+  function startRound(mode){
+    if (state) clearTimeout(state.timer);
+    state = {mode, i: 0, stars: 0, results: [], used: new Set()};
+    show('quiz'); nextQuestion();
+  }
+
+  function showResult(){
+    const before = friendsFor(totalStars);
+    totalStars += state.stars; store.set('stars', totalStars);
+    const after = friendsFor(totalStars);
+    const s = state.stars;
+    const [en, ja] = s === ROUND ? ['Super Star!', 'ぜんもん せいかい！'] : s >= 7 ? ['Great Job!', 'よく できました！'] : s >= 4 ? ['Way to Go!', 'がんばったね！'] : ['Nice Try!', 'たくさん かぞえたね！'];
+    $('resEn').textContent = en; $('resTitle').textContent = ja;
+    $('resScore').textContent = `ほし ${s} / ${ROUND}`;
+    const bs = $('bigStars'); bs.replaceChildren();
+    state.results.forEach(r => { const w = el('span', r ? '' : 'off'); w.innerHTML = STAR_SVG; bs.append(w); });
+    const nf = $('resNew'); nf.replaceChildren();
+    freshFriends = new Set();
+    if (after > before){
+      for (let k = before + 1; k <= after; k++) freshFriends.add(k);
+      selectedFriend = after;
+      const box = el('div', 'panel newfriend');
+      const names = [...freshFriends].map(k => `「${k}」`).join('');
+      box.append(el('span', 'en', after - before > 1 ? 'New friends!' : 'New friend!'), el('b', '', `あたらしい なかま ${names} が きたよ！`));
+      const row = el('div', 'row');
+      for (const k of freshFriends){ const bd = bud(k); bd.classList.add('popin', 'hop'); row.append(bd); }
+      box.append(row);
+      nf.append(box);
+    }
+    show('result'); sfx.fanfare(); confetti(120);
+    say(ja, en);
+  }
+
+  // ---------- home ----------
+  function renderHome(){
+    const tt = $('titleTiles'); tt.replaceChildren();
+    [...'さんすうランド'].forEach((ch, i) => {
+      const t = el('span', 'tile', ch); t.style.background = RAINBOW[i];
+      t.style.animationDelay = (i * 70) + 'ms'; tt.append(t);
+    });
+    const m = $('mascot'); m.replaceChildren(); const mb = bud(3); mb.classList.add('hop'); m.append(mb);
+    renderGreeting();
+
+    const ms = $('modes'); ms.replaceChildren();
+    for (const [key, md] of Object.entries(MODES)){
+      const b = el('button', 'mode' + (md.mix ? ' mix' : '')); b.type = 'button';
+      b.style.setProperty('--col', mainColor(md.icon));
+      b.append(el('span', 'men', md.en), el('span', 'mlabel', md.label), el('span', 'msub', md.sub), el('span', 'msample', md.sample));
+      if (!md.mix) b.append(bud(md.icon));
+      b.addEventListener('click', () => { sfx.tap(); startRound(key); });
+      ms.append(b);
+    }
+    renderShelf();
+  }
+
+  function renderShelf(){
+    $('totalStars').textContent = totalStars;
+    const have = friendsFor(totalStars);
+    $('friendCount').textContent = `${have} / ${MAX_FRIENDS}`;
+    const ch = $('chart'); ch.replaceChildren();
+    for (let k = 1; k <= MAX_FRIENDS; k++){
+      const on = k <= have;
+      const c = el('button', 'cell' + (on ? ' on' : ''));
+      c.type = 'button'; c.disabled = !on;
+      c.setAttribute('aria-label', on ? `なかま ${k}` : `${k}（まだ）`);
+      if (on){ paint(c, k); if (freshFriends.has(k)) c.classList.add('new'); if (k === selectedFriend) c.classList.add('sel'); }
+      c.append(el('span', '', String(k)));
+      c.addEventListener('click', () => { selectedFriend = k; sfx.tap(); renderShelf(); say(`${k}`, word(k)); });
+      ch.append(c);
+    }
+    const dt = $('detail'); dt.replaceChildren();
+    const show1 = selectedFriend && selectedFriend <= have ? selectedFriend : have;
+    if (show1){
+      const who = el('div', 'who');
+      who.append(el('b', '', String(show1)), el('span', 'en', word(show1)));
+      dt.append(bud(show1), who);
+    }
+    $('nextFriend').textContent = have >= MAX_FRIENDS
+      ? '100にんの なかまが ぜんいん そろったよ！ You did it!'
+      : `ほしを あと ${STARS_PER_FRIEND * (have + 1) - totalStars}こ あつめると「${have + 1}」が なかまに なるよ`;
+  }
+
+  function renderGreeting(){
+    const g = $('greet'); g.replaceChildren();
+    g.append(el('span', 'en', kidName ? `Hi, ${kidName}!` : "Hi, friend!"),
+      document.createTextNode(kidName ? `${kidName}ちゃん、あそぼう！ どれに する？` : 'あそぼう！ どれに する？'));
+    if (!englishOn) g.firstChild.remove();
+  }
+
+  function show(id){
+    for (const s of ['home', 'quiz', 'result']) $(s).hidden = s !== id;
+    if (id === 'home') renderHome();
+    scrollTo(0, 0);
+  }
+
+  // ---------- wiring ----------
+  function syncToggles(){
+    $('sndToggle').setAttribute('aria-pressed', soundOn);
+    $('voiceToggle').setAttribute('aria-pressed', voiceOn);
+    $('enToggle').setAttribute('aria-pressed', englishOn);
+  }
+  $('sndToggle').addEventListener('click', () => { soundOn = !soundOn; store.set('sound', soundOn); syncToggles(); sfx.tap(); });
+  $('voiceToggle').addEventListener('click', () => { voiceOn = !voiceOn; store.set('voice', voiceOn); syncToggles(); if (voiceOn) say('よみあげ するよ'); else try { speechSynthesis.cancel(); } catch {} });
+  $('enToggle').addEventListener('click', () => { englishOn = !englishOn; store.set('english', englishOn); syncToggles(); renderGreeting(); if (englishOn) say('', "Let's learn English!"); });
+  $('nameToggle').addEventListener('click', () => { const nb = $('nameBox'); nb.hidden = !nb.hidden; if (!nb.hidden){ $('nameInput').value = kidName; $('nameInput').focus(); } });
+  function saveName(){ kidName = $('nameInput').value.trim().slice(0, 10); store.set('name', kidName); $('nameBox').hidden = true; renderGreeting(); if (kidName) say(`${kidName}ちゃん、よろしくね`); }
+  $('nameSave').addEventListener('click', saveName);
+  $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+  $('quitBtn').addEventListener('click', () => { clearTimeout(state && state.timer); try { speechSynthesis.cancel(); } catch {} show('home'); });
+  $('againBtn').addEventListener('click', () => startRound(state.mode));
+  $('menuBtn').addEventListener('click', () => show('home'));
+
+  syncToggles();
+  show('home');
+})();
+</script>
+</body>
+</html>
