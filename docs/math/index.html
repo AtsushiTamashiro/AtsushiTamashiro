@@ -102,7 +102,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
   background:var(--sun);
   animation:wobble 2.2s ease-in-out infinite;
 }
-.mystery.filled{border-style:solid;animation:none;color:#fff;text-shadow:var(--outline);box-shadow:var(--drop)}
+.mystery.filled{background:var(--col);border-style:solid;animation:none;color:#fff;text-shadow:var(--outline);box-shadow:var(--drop)}
 @keyframes wobble{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
 @keyframes hop{0%{transform:translateY(0) scale(1)}30%{transform:translateY(-22px) scale(1.06,.95)}60%{transform:translateY(0) scale(1.05,.92)}100%{transform:translateY(0) scale(1)}}
 @keyframes popin{0%{transform:scale(.2) rotate(-12deg);opacity:0}70%{transform:scale(1.12) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
@@ -150,7 +150,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
 }
 
 .modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-@media (min-width:640px){.modes{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:640px){.modes{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .mode{
   --col:#ccc;
   display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
@@ -446,7 +446,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
   // A block buddy: n cubes stacked in towers (5 high up to 20, 10 high beyond), face on top of the first tower.
-  function bud(n, {ghost = 0, hint = false, start = 1, face = true, tower = 0} = {}){
+  function bud(n, {ghost = 0, hint = false, start = 1, same = 0, face = true, tower = 0} = {}){
     const wrap = el('div', 'bud');
     const g = el('div', 'grid');
     const rows = Math.max(1, Math.min(n, tower || (n <= 20 ? 5 : 10)));
@@ -459,7 +459,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
       const gone = i >= n - ghost;
       if (gone) c.classList.add('ghost');
       if (face && i === rows - 1 && !gone){ c.classList.add('face'); c.append(el('span', 'eyes')); }
-      c.append(el('span', 'num', gone ? '' : String(start + i)));
+      c.append(el('span', 'num', gone ? '' : String(same || start + i)));
       g.append(c);
     }
     wrap.append(g);
@@ -572,7 +572,9 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
     add20(){ const a = rand(2, 10), b = rand(Math.max(1, 11 - a), 10); return {op: '+', a, b, ans: a + b}; },
     sub10(){ const a = rand(2, 10), b = rand(1, a - 1); return {op: '−', a, b, ans: a - b}; },
     mul5(){ const a = rand(1, 5), b = rand(1, 5); return {op: '×', a, b, ans: a * b}; },
-    mul10(){ const a = rand(6, 10), b = rand(1, 10); return {op: '×', a, b, ans: a * b}; }
+    mul10(){ const a = rand(6, 10), b = rand(1, 10); return {op: '×', a, b, ans: a * b}; },
+    div5(){ const b = rand(2, 5), ans = rand(1, 5); return {op: '÷', a: b * ans, b, ans}; },
+    div10(){ const b = rand(6, 10), ans = rand(1, 10); return {op: '÷', a: b * ans, b, ans}; }
   };
   const MODES = {
     add10: {label: 'たしざん', en: 'Addition', sub: 'こたえが 10まで', icon: 3, sample: '3 + 4', gen: gens.add10},
@@ -580,11 +582,13 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
     sub10: {label: 'ひきざん', en: 'Subtraction', sub: '10までの かず', icon: 4, sample: '7 − 2', gen: gens.sub10},
     mul5:  {label: 'かけざん', en: 'Times 1–5', sub: '1〜5の だん', icon: 6, sample: '2 × 3', gen: gens.mul5},
     mul10: {label: 'かけざん', en: 'Times 6–10', sub: '6〜10の だん', icon: 8, sample: '7 × 4', gen: gens.mul10},
+    div5:  {label: 'わりざん', en: 'Division ÷2–5', sub: '2〜5で わる', icon: 2, sample: '6 ÷ 2', gen: gens.div5},
+    div10: {label: 'わりざん', en: 'Division ÷6–10', sub: '6〜10で わる', icon: 1, sample: '24 ÷ 6', gen: gens.div10},
     mix:   {label: 'ごちゃまぜ', en: 'Mix It Up', sub: 'いろいろ でるよ', icon: 7, sample: '? ? ?', mix: true,
-      gen(){ return pick([gens.add10, gens.add20, gens.sub10, gens.mul5])(); }}
+      gen(){ return pick([gens.add10, gens.add20, gens.sub10, gens.mul5, gens.div5])(); }}
   };
-  const SPOKEN = {'+': 'たす', '−': 'ひく', '×': 'かける'};
-  const SPOKEN_EN = {'+': 'plus', '−': 'minus', '×': 'times'};
+  const SPOKEN = {'+': 'たす', '−': 'ひく', '×': 'かける', '÷': 'わる'};
+  const SPOKEN_EN = {'+': 'plus', '−': 'minus', '×': 'times', '÷': 'divided by'};
   const PRAISE = [['Great job!', 'せいかい！'], ['Awesome!', 'すごい！'], ['You did it!', 'やったね！'], ['Super!', 'ばっちり！'], ['Amazing!', 'てんさい！'], ['Perfect!', 'かんぺき！']];
   const ROUND = 10;
 
@@ -605,13 +609,24 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
   function renderScene(hint){
     const q = state.q, sc = $('scene');
     sc.replaceChildren();
-    sc.classList.toggle('big', q.op === '×' && q.a > 5);
+    sc.classList.toggle('big', (q.op === '×' && q.a > 5) || (q.op === '÷' && q.a > 25));
     const cap = $('caption'); cap.hidden = true;
     if (q.op === '+'){
       sc.append(bud(q.a, {hint}), el('span', 'op', '+'), bud(q.b, {hint, start: q.a + 1}));
     } else if (q.op === '−'){
       sc.append(bud(q.a, {hint, ghost: q.b}));
       cap.hidden = false; cap.textContent = `${q.a}こ から ${q.b}こ ばいばい`;
+    } else if (q.op === '÷'){
+      // Before a mistake: the whole pile and the group size. On a hint or once solved: the pile regrouped, each group numbered.
+      if (hint || state.solved){
+        const gr = el('div', 'groups');
+        for (let k = 0; k < q.ans; k++) gr.append(bud(q.b, {hint, same: k + 1, tower: q.b}));
+        sc.append(gr);
+      } else sc.append(bud(q.a), el('span', 'op', '÷'), bud(q.b));
+      cap.hidden = false;
+      cap.textContent = state.solved ? `${q.b}こずつ ${q.ans}つ できたね`
+        : hint ? `${q.b}こずつ まとめたよ。いくつ できたかな？`
+        : `${q.a}こを ${q.b}こずつ わけると いくつ？`;
     } else {
       const gr = el('div', 'groups');
       for (let k = 0; k < q.b; k++) gr.append(bud(q.a, {hint, start: k * q.a + 1, tower: q.a > 5 ? q.a : 5}));
@@ -621,7 +636,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
     sc.append(el('span', 'op', '='));
     if (state.solved){
       let ans;
-      if (q.op === '×' || q.ans === 0){ ans = el('div', 'mystery filled', String(q.ans)); paint(ans, q.ans); }
+      if (q.op === '×' || q.op === '÷' || q.ans === 0){ ans = el('div', 'mystery filled', String(q.ans)); paint(ans, q.ans); }
       else ans = bud(q.ans);
       ans.classList.add('popin'); sc.append(ans);
       requestAnimationFrame(() => ans.classList.add('hop'));
@@ -647,7 +662,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
       d.append(dot);
     }
     $('roundStars').textContent = state.stars;
-    $('qno').textContent = `Q${Math.min(state.i + 1, ROUND)}`;
+    $('qno').textContent = `Q${Math.min(state.solved ? state.i : state.i + 1, ROUND)}`;
   }
 
   function setMsg(kind, big, ja){
@@ -693,7 +708,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
       state.firstTry = false;
       btn.classList.add('wrong'); btn.disabled = true;
       renderScene(true);
-      const tip = q.op === '−' ? 'のこった ブロックを かぞえてみよう' : 'ブロックを かぞえてみよう';
+      const tip = q.op === '−' ? 'のこった ブロックを かぞえてみよう' : q.op === '÷' ? 'まとまりを かぞえてみよう' : 'ブロックを かぞえてみよう';
       setMsg('oops', englishOn ? 'So close!' : '', `おしい！ ${tip}`);
       sfx.oops(); say(`おしい！ ${tip}`, 'So close! Let\'s count.');
     }
