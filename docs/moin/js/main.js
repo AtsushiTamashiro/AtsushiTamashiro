@@ -354,6 +354,7 @@ addEventListener('keydown', e => {
   if (/^Digit[1-9]$/.test(e.code)) selectSlot(+e.code.slice(5) - 1);
   if (e.code === 'KeyE' && aimNPC) talkTo(aimNPC);
   if (e.code === 'KeyI' || e.code === 'Tab') { e.preventDefault(); openInv(); }
+  if (e.code === 'KeyH') respawn();
   if (e.code === 'KeyF') { player.fly = !player.fly; player.vel.y = 0; refreshHotbar(); toast(player.fly ? '飛行モード ON' : '飛行モード OFF'); }
   if (e.code === 'Space') e.preventDefault();
 });
@@ -478,6 +479,15 @@ function placeBlock() {
   refreshHotbar(); voice.place(); swing = 1;
 }
 
+// ---- 自宅(村)へもどる ----
+function respawn() {
+  const c = world.villageCenter, x = Math.floor(c.x) + 0.5, z = Math.floor(c.z) + 7.5;
+  player.pos.set(x, world.topY(Math.floor(x), Math.floor(z)) + 1.2, z);
+  player.vel.set(0, 0, 0); player.yaw = 0; player.pitch = -0.1;
+  mining = false; voice.blip(); toast('🏠 村にもどってきた');
+}
+$('bHome').addEventListener('click', e => { e.stopPropagation(); if (state === 'play') respawn(); });
+
 // ---- プレイヤー移動 ----
 function updatePlayer(dt) {
   let fx = 0, fz = 0;
@@ -516,7 +526,7 @@ function updatePlayer(dt) {
   if (player.fly && player.onGround && !jump) { /* 着地しても飛行は続く */ }
   if (player.onGround && l > 0.1 && !player.fly) { player.stepT -= dt * (sprint ? 1.4 : 1); if (player.stepT <= 0) { player.stepT = 0.38; voice.step(); } }
   if (!hadGround && player.onGround) voice.step();
-  if (player.pos.y < -20) { const c = world.villageCenter; player.pos.set(c.x + 0.5, c.y + 2, c.z + 7.5); player.vel.set(0, 0, 0); toast('村にもどってきた'); }
+  if (player.pos.y < -20) respawn();
   // カメラ
   const bob = player.onGround && l > 0.1 && !player.fly ? Math.sin(performance.now() / 110) * 0.04 : 0;
   camera.position.set(player.pos.x, player.pos.y + 1.6 + bob, player.pos.z);
