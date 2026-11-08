@@ -81,8 +81,8 @@ function canvasTex(w, h, draw) {
 }
 
 export class World {
-  constructor(scene) {
-    this.scene = scene;
+  constructor(scene, opts = {}) {
+    this.scene = scene; this.q = opts.low ? 0.5 : 1;
     this.rng = mulberry32(1429);
     this.colliders = [];
     this.grid = new Map();
@@ -246,7 +246,7 @@ export class World {
     this.cloudMat = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, depthWrite: false, fog: false, opacity: 0.85 });
     this.clouds = new THREE.Group();
     const r = this.rng;
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 60 * this.q; i++) {
       const cx = (r() - 0.5) * 1200 - 100, cz = 100 - r() * 1400, cy = 110 + r() * 60;
       for (let k = 0; k < 4; k++) {
         const s = new THREE.Sprite(this.cloudMat); s.position.set(cx + (r() - 0.5) * 50, cy + r() * 10, cz + (r() - 0.5) * 30);
@@ -663,7 +663,7 @@ export class World {
     }
     // 道沿いの区間ごとの植生
     const L = this.pathLen;
-    for (let i = 0; i < 9000; i++) {
+    for (let i = 0; i < 9000 * this.q; i++) {
       const s = r() * L, p = this.pointAt(s), side = r() < 0.5 ? -1 : 1;
       const off = 24 + Math.pow(r(), 1.5) * 110, x = p.x + p.nx * off * side + (r() - 0.5) * 6, z = p.z + p.nz * off * side + (r() - 0.5) * 6;
       if (!canPlace(x, z)) continue;
@@ -701,7 +701,7 @@ export class World {
       this.pushInst(palm, x, z, 0.6 + r() * 0.5, r() * 6); if (this.nearest(x, z).d < 32) this.addCircle(x, z, 0.35);
     }
     // 道端の草
-    for (let i = 0; i < 3500; i++) {
+    for (let i = 0; i < 3500 * this.q; i++) {
       const s = r() * L, p = this.pointAt(s), side = r() < 0.5 ? -1 : 1, off = 4 + r() * 26;
       const x = p.x + p.nx * off * side, z = p.z + p.nz * off * side;
       if (!canPlace(x, z) || Math.hypot(x - CASTLE.x, z - CASTLE.z) < 44) continue;

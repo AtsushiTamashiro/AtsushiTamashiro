@@ -94,6 +94,27 @@
   #hint { position: absolute; right: 16px; top: 70px; background: rgba(20,12,8,.7); border: 1px solid rgba(217,180,90,.6); padding: 10px 14px; font-size: 13px; line-height: 1.9; border-radius: 6px; opacity: 0; transition: opacity .6s; }
   #hint.show { opacity: 1; }
   body.touch #hint { display: none; }
+  #thint { display: none; position: absolute; left: 50%; top: 22%; transform: translateX(-50%); background: rgba(20,12,8,.75); border: 1px solid rgba(217,180,90,.6); padding: 8px 14px; font-size: 13px; line-height: 1.8; border-radius: 6px; opacity: 0; transition: opacity .6s; text-align: center; white-space: nowrap; }
+  body.touch #thint { display: block; } #thint.show { opacity: 1; }
+  #rotate { z-index: 60; }
+  body { -webkit-touch-callout: none; overscroll-behavior: none; }
+  body.touch #joy { left: calc(40px + env(safe-area-inset-left)); }
+  body.touch #status { left: calc(12px + env(safe-area-inset-left)); }
+  body.touch .tb { margin-right: env(safe-area-inset-right); }
+  @media (max-height: 520px) {
+    #title { justify-content: flex-start; overflow-y: auto; padding-top: 22px; }
+    #title h1 { font-size: 40px; } #title .sub { font-size: 14px; margin: 2px 0; } #title .lead { font-size: 12px; line-height: 1.6; margin: 6px 0 10px; }
+    .menu { gap: 7px; } .btn { padding: 8px 14px; font-size: 16px; } .btn.ghost { padding: 6px; font-size: 13px; }
+    .card { padding: 16px 18px; } .card h2 { font-size: 22px; margin-bottom: 6px; } .keys, .tips { font-size: 12px; }
+    #dialog { padding: 14px 18px 16px; bottom: 3%; } #dText { font-size: 15px; min-height: 3.2em; }
+    #banner { top: 16%; } #bannerName { font-size: 42px; }
+    body.touch #boss { top: 52px; }
+    .tb[data-btn=atk] { width: 76px; height: 76px; bottom: 22px; right: 20px; }
+    .tb[data-btn=dodge] { bottom: 16px; right: 108px; } .tb[data-btn=jump] { bottom: 112px; right: 26px; }
+    .tb[data-btn=blk] { bottom: 88px; right: 98px; } .tb[data-btn=sp] { bottom: 30px; right: 178px; }
+    .tb[data-btn=lock] { bottom: 158px; right: 98px; } .tb[data-btn=talk] { bottom: 180px; right: 30px; }
+    #toast { bottom: 30%; font-size: 13px; } #prompt { bottom: 40%; }
+  }
 
   #boss { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(640px, 80vw); opacity: 0; transition: opacity .5s; text-align: center; }
   #boss.show { opacity: 1; }
@@ -126,7 +147,8 @@
 
   /* タッチ操作 */
   #touchLayer { position: fixed; inset: 0; z-index: 12; display: none; }
-  body.touch #touchLayer { display: block; }
+  body.touch.playing #touchLayer { display: block; }
+  body.touch #progress { left: auto; right: 64px; transform: none; width: 42vw; }
   #joy { position: absolute; left: 40px; bottom: 40px; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(255,240,210,.4); background: rgba(0,0,0,.2); opacity: .45; pointer-events: none; }
   #joy.on { opacity: .9; }
   #joyKnob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(243,234,214,.75); }
@@ -176,11 +198,12 @@
     <b>Shift</b> 回避 / <b>Space</b> 跳躍<br>
     <b>Q</b> 注目 / <b>R</b> 奥義 / <b>E</b> 話す
   </div>
+  <div id="thint">左側をなぞって移動 / 右側をなぞって視点<br>「撃」攻撃(連打で連撃) 「防」長押しで防御<br>「避」前転で回避 「狙」敵に注目 「奥義」気が満ちたら</div>
   <div id="boss"><div class="nm">海賊頭 黒鮫</div><div class="bar"><div id="bossFill"></div></div></div>
   <div id="hurt"></div>
 </div>
 
-<div id="dialog"><span id="dName"></span><div id="dText"></div><div class="next">▼ クリック / Enter</div></div>
+<div id="dialog"><span id="dName"></span><div id="dText"></div><div class="next" id="dNext">▼ クリック / Enter</div></div>
 
 <div id="touchLayer">
   <div id="joy"><div id="joyKnob"></div></div>
@@ -208,6 +231,12 @@
   <div class="bingata bot"></div>
 </div>
 
+<div class="panel" id="rotate"><div class="card">
+  <h2>横向きがおすすめ</h2>
+  <p>スマホを横向きにすると、広い視界で遊べます。</p>
+  <div class="menu"><button class="btn ghost" id="btnRotateOk">このまま遊ぶ</button></div>
+</div></div>
+
 <div class="panel" id="howto"><div class="card">
   <h2>操作説明</h2>
   <div class="keys">
@@ -227,7 +256,7 @@
     ・「見切り」に成功すると敵が崩れ、与えるダメージが大きくなる。<br>
     ・赤い円は受け止められない大技。前転で範囲の外へ逃れよう。<br>
     ・道中の拝所(ウガンジュ)で体力が回復し、倒れてもそこから再開できる。<br>
-    ・スマホ・タブレットでは画面のボタンで操作できます。
+    ・スマホ・タブレット:画面左側をなぞって移動、右側をなぞって視点。「撃」攻撃、「防」長押しで防御、「避」回避、「跳」跳躍、「狙」注目、「奥義」、「話」会話。
   </div>
   <div class="menu"><button class="btn" id="btnHowClose">閉じる</button></div>
 </div></div>

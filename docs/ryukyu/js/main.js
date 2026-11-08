@@ -119,21 +119,26 @@ class UI {
 class Game {
   constructor() {
     this.canvas = $('game');
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+    this.isTouch = matchMedia('(pointer: coarse)').matches || (navigator.maxTouchPoints > 0 && !matchMedia('(hover: hover)').matches);
+    this.low = this.isTouch || (navigator.hardwareConcurrency || 8) <= 4;
+    this.viewDist = this.low ? 55 : 80;
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !this.low, powerPreference: 'high-performance' });
+    // 解像度は負荷に応じて自動調整(スマホは控えめから開始)
+    this.prMax = Math.min(devicePixelRatio, this.low ? 1.5 : 1.75); this.pr = this.low ? Math.min(this.prMax, 1.0) : this.prMax; this.perfT = 0; this.perfN = 0;
+    this.renderer.setPixelRatio(this.pr);
     this.renderer.setSize(innerWidth, innerHeight);
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 1200);
-    this.scene.fog = new THREE.Fog('#dcecf2', 90, 420);
+    this.camera = new THREE.PerspectiveCamera(innerWidth < innerHeight ? 70 : 58, innerWidth / innerHeight, 0.1, 1200);
+    this.scene.fog = new THREE.Fog('#dcecf2', this.low ? 60 : 90, this.low ? 260 : 420);
     this.hemi = new THREE.HemisphereLight('#cfe6ff', '#6b5a3a', 1.0); this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight('#fff0d0', 2.6); this.sun.castShadow = true;
     const sc = this.sun.shadow.camera; sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 260;
-    this.sun.shadow.mapSize.set(2048, 2048); this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.04;
+    this.sun.shadow.mapSize.set(this.low ? 1024 : 2048, this.low ? 1024 : 2048); this.sun.shadow.bias = -0.0004; this.sun.shadow.normalBias = 0.04;
     this.scene.add(this.sun); this.scene.add(this.sun.target);
 
-    this.world = new World(this.scene);
+    this.world = new World(this.scene, { low: this.low });
     this.fx = new FX(this.scene);
     this.audio = new AudioSys();
     this.player = new Player(this);
@@ -150,7 +155,8 @@ class Game {
     this.setupLevel();
     this.setupInput();
     this.setupMenus();
-    addEventListener('resize', () => { this.renderer.setSize(innerWidth, innerHeight); this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); });
+    const onResize = () => { this.renderer.setSize(innerWidth, innerHeight); this.camera.aspect = innerWidth / innerHeight; this.camera.fov = innerWidth < innerHeight ? 70 : 58; this.camera.updateProjectionMatrix(); };
+    addEventListener('resize', onResize); addEventListener('orientationchange', () => setTimeout(onResize, 300));
     // タイトル画面用のカメラ
     this.titleT = 0;
     this.clock = new THREE.Clock();
@@ -220,13 +226,13 @@ class Game {
     this.setupTouch();
   }
   setupTouch() {
-    this.isTouch = matchMedia('(pointer: coarse)').matches;
     this.joy = { x: 0, y: 0, id: null, ox: 0, oy: 0 }; this.camTouch = null; this.tbtn = {};
     if (!this.isTouch) return;
     document.body.classList.add('touch');
     const joyEl = $('joy'), knob = $('joyKnob');
     const start = (e) => {
       this.audio.init();
+      if (this.mode === 'dialog') { this.advanceDialog(); e.preventDefault(); return; }
       for (const t of e.changedTouches) {
         const el = document.elementFromPoint(t.clientX, t.clientY);
         if (el && el.dataset && el.dataset.btn) continue;
@@ -257,7 +263,7 @@ class Game {
     tl.addEventListener('touchend', end); tl.addEventListener('touchcancel', end);
     for (const b of document.querySelectorAll('[data-btn]')) {
       const k = b.dataset.btn;
-      b.addEventListener('touchstart', (e) => { e.preventDefault(); this.audio.init(); this.tbtn[k] = true; this.pressed['T' + k] = true; b.classList.add('on'); if (this.mode === 'dialog') this.advanceDialog(); }, { passive: false });
+      b.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); this.audio.init(); this.tbtn[k] = true; this.pressed['T' + k] = true; b.classList.add('on'); if (this.mode === 'dialog') this.advanceDialog(); }, { passive: false });
       const up = (e) => { e.preventDefault(); this.tbtn[k] = false; b.classList.remove('on'); };
       b.addEventListener('touchend', up, { passive: false }); b.addEventListener('touchcancel', up, { passive: false });
     }
@@ -287,13 +293,19 @@ class Game {
 
   // ---------------- メニュー ----------------
   setupMenus() {
+    $('dialog').addEventListener('click', () => this.advanceDialog());
+    $('dialog').addEventListener('touchstart', (e) => { e.preventDefault(); this.audio.init(); this.advanceDialog(); }, { passive: false });
+    if (this.isTouch) $('dNext').textContent = '▼ タップで次へ';
+    $('btnRotateOk').onclick = () => { this.rotateOk = true; $('rotate').classList.remove('show'); };
+    const checkRotate = () => $('rotate').classList.toggle('show', this.isTouch && !this.rotateOk && innerHeight > innerWidth);
+    addEventListener('resize', checkRotate); checkRotate();
     const track = $('ptrack'), L = this.world.pathLen;
     for (const z of ZONES) { const m = document.createElement('div'); m.className = 'pz'; const f = z.id === 0 ? 0 : this.world.sAtZ(z.zMax) / L; m.style.left = f * 100 + '%'; m.innerHTML = `<i></i><span>${z.name}</span>`; track.appendChild(m); }
     const c = document.createElement('div'); c.className = 'pz castle'; c.style.left = '100%'; c.innerHTML = '<i></i><span>首里城</span>'; track.appendChild(c);
     const save = loadSave();
     if (save) $('btnContinue').classList.remove('hidden');
-    $('btnStart').onclick = () => { this.audio.init(); clearSave(); this.startGame(null); };
-    $('btnContinue').onclick = () => { this.audio.init(); this.startGame(loadSave()); };
+    $('btnStart').onclick = () => { this.audio.init(); this.goFullscreen(); clearSave(); this.startGame(null); };
+    $('btnContinue').onclick = () => { this.audio.init(); this.goFullscreen(); this.startGame(loadSave()); };
     $('btnHow').onclick = () => $('howto').classList.add('show');
     $('btnHowClose').onclick = () => $('howto').classList.remove('show');
     $('btnResume').onclick = () => this.pause(false);
@@ -305,7 +317,7 @@ class Game {
     $('btnPauseMobile').onclick = () => { if (this.mode === 'play') this.pause(true); };
   }
   startGame(save) {
-    $('title').classList.add('hide'); $('hud').classList.add('show');
+    $('title').classList.add('hide'); $('hud').classList.add('show'); document.body.classList.add('playing');
     const w = this.world;
     this.cpIndex = 0;
     if (save && save.cp > 0) {
@@ -327,7 +339,11 @@ class Game {
     }
     this.lastZone = zoneAtZ(this.player.pos.z).id;
   }
-  showHint() { const h = $('hint'); h.classList.add('show'); setTimeout(() => h.classList.remove('show'), 14000); }
+  goFullscreen() {
+    if (!this.isTouch) return;
+    try { const el = document.documentElement, rq = el.requestFullscreen || el.webkitRequestFullscreen; const r = rq && rq.call(el, { navigationUI: 'hide' }); if (r && r.then) r.then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {}); } catch { /* iPhone などは非対応 */ }
+  }
+  showHint() { const h = $(this.isTouch ? 'thint' : 'hint'); h.classList.add('show'); setTimeout(() => h.classList.remove('show'), 14000); }
   pause(on) {
     if (on) { this.mode = 'pause'; $('pause').classList.add('show'); if (document.pointerLockElement) document.exitPointerLock(); }
     else { this.mode = 'play'; $('pause').classList.remove('show'); $('howto').classList.remove('show'); }
@@ -411,7 +427,7 @@ class Game {
     $('stKills').textContent = this.player.stats.kills + ' 人(匹)';
     $('stParry').textContent = this.player.stats.parries + ' 回';
     $('stTaken').textContent = Math.round(this.stats.taken);
-    $('ending').classList.add('show'); $('hud').classList.remove('show');
+    $('ending').classList.add('show'); $('hud').classList.remove('show'); document.body.classList.remove('playing');
     if (document.pointerLockElement) document.exitPointerLock();
   }
   onPlayerDeath() {
@@ -475,8 +491,19 @@ class Game {
   saveNow() { writeSave({ cp: this.cpIndex, bo: this.player.weapon === 'bo' }); }
 
   // ---------------- メインループ ----------------
+  // 負荷に応じて描画解像度を上下させる
+  adaptQuality(raw) {
+    this.perfT += raw; this.perfN++;
+    if (this.perfT < 2) return;
+    const avg = this.perfT / this.perfN; this.perfT = 0; this.perfN = 0;
+    let pr = this.pr;
+    if (avg > 1 / 40 && pr > 0.6) pr = Math.max(0.6, pr - 0.15);
+    else if (avg < 1 / 57 && pr < this.prMax) pr = Math.min(this.prMax, pr + 0.1);
+    if (pr !== this.pr) { this.pr = pr; this.renderer.setPixelRatio(pr); this.renderer.setSize(innerWidth, innerHeight); }
+  }
   loop() {
-    let rdt = Math.min(this.clock.getDelta(), 0.05);
+    const raw = this.clock.getDelta(); if (!document.hidden) this.adaptQuality(Math.min(raw, 0.2));
+    let rdt = Math.min(raw, 0.05);
     this.time += rdt; this.dt = rdt;
     let dt = rdt;
     if (this.stopT > 0) { this.stopT -= rdt; dt = rdt * 0.05; } else if (this.slowT > 0) { this.slowT -= rdt; dt = rdt * 0.35; }

@@ -305,7 +305,7 @@ export class Enemy {
     const g = this.g, P = g.player, w = g.world; this.time += dt; this.t += dt; this.flash -= dt;
     const dP = flatDist(P.pos, this.pos), toP = Math.atan2(P.pos.x - this.pos.x, P.pos.z - this.pos.z);
     // 遠くの敵は休眠
-    if (dP > 80 && this.state !== 'dead') { this.model.root.visible = false; this.warn.visible = false; return; }
+    if (dP > this.g.viewDist && this.state !== 'dead') { this.model.root.visible = false; this.warn.visible = false; return; }
     this.model.root.visible = true;
     let action = null, a = 0, speed = 0; const T = this.T;
     const hv = new THREE.Vector3(this.vel.x, 0, this.vel.z);
