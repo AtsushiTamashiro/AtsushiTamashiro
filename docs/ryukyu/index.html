@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>琉球道中記 〜読谷山から首里へ〜</title>
+<meta name="description" content="琉球王国時代を舞台にした3Dアクションゲーム。読谷山の百姓・樽金となり、海賊の襲来を知らせるため首里城を目指す。">
+<style>
+  :root { --red: #b3282c; --gold: #d9b45a; --ink: #1b1512; --paper: #f3ead6; --indigo: #2b4566; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d0b0a; color: var(--paper);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hide { display: none !important; }
+  .hidden { display: none; }
+  button { font: inherit; cursor: pointer; }
+
+  /* 読み込み */
+  #loading { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; flex-direction: column; background: #120e0c; font-size: 20px; letter-spacing: .2em; }
+  #loading pre { font-size: 12px; color: #c88; white-space: pre-wrap; max-width: 90vw; }
+
+  /* タイトル */
+  #title { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,.05), rgba(0,0,0,.55)); text-shadow: 0 2px 12px rgba(0,0,0,.6); padding: 16px; text-align: center; }
+  #title h1 { font-size: clamp(44px, 9vw, 96px); margin: 0; letter-spacing: .18em; font-weight: 800; color: #fff6e2;
+    -webkit-text-stroke: 1px rgba(80,20,10,.6); }
+  #title h1 em { font-style: normal; color: var(--gold); }
+  #title .sub { font-size: clamp(16px, 2.6vw, 26px); letter-spacing: .4em; margin: 8px 0 6px; }
+  #title .lead { max-width: 620px; font-size: 15px; line-height: 1.9; opacity: .95; margin: 14px 0 26px; }
+  .menu { display: flex; flex-direction: column; gap: 12px; width: min(320px, 90vw); }
+  .btn { background: linear-gradient(#c8323a, #8d1d22); color: #fff4dc; border: 2px solid var(--gold); padding: 13px 18px; font-size: 19px; letter-spacing: .2em; border-radius: 6px;
+    box-shadow: 0 4px 0 #5a1013, 0 8px 22px rgba(0,0,0,.45); transition: transform .08s; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #5a1013; }
+  .btn.sub2 { background: linear-gradient(#3a5578, #233650); box-shadow: 0 4px 0 #142033, 0 8px 22px rgba(0,0,0,.45); }
+  .btn.ghost { background: rgba(0,0,0,.35); box-shadow: none; font-size: 15px; padding: 9px; border-color: rgba(217,180,90,.6); }
+  .bingata { position: absolute; left: 0; right: 0; height: 14px; background: repeating-linear-gradient(90deg, #d9b45a 0 18px, #b3282c 18px 36px, #2b4566 36px 54px, #3f7c34 54px 72px); opacity: .9; }
+  .bingata.top { top: 0; } .bingata.bot { bottom: 0; }
+
+  /* パネル */
+  .panel { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; background: rgba(10,6,4,.72); padding: 16px; }
+  .panel.show { display: flex; }
+  .card { background: linear-gradient(#f6eedb, #e8dcc0); color: var(--ink); border: 3px solid var(--red); outline: 2px solid var(--gold); outline-offset: -8px;
+    border-radius: 8px; padding: 26px 28px; max-width: 640px; width: 100%; max-height: 90vh; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.6); text-align: center; }
+  .card h2 { margin: 0 0 12px; font-size: 28px; letter-spacing: .2em; color: var(--red); }
+  .card p { line-height: 1.8; }
+  .card .menu { margin: 18px auto 0; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; text-align: left; font-size: 15px; margin: 8px auto; max-width: 480px; }
+  .keys b { font-family: ui-monospace, Menlo, monospace; background: #2b2018; color: #f3ead6; padding: 1px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; text-align: center; }
+  .tips { text-align: left; font-size: 14px; background: rgba(179,40,44,.08); padding: 10px 14px; border-left: 4px solid var(--red); margin-top: 12px; line-height: 1.8; }
+  #ending .card { max-width: 560px; }
+  .stats { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; text-align: left; max-width: 320px; margin: 14px auto; font-size: 17px; }
+  .stats span:nth-child(even) { font-weight: 700; color: var(--red); text-align: right; }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; display: none; }
+  #hud.show { display: block; }
+  #status { position: absolute; left: 18px; top: 16px; width: min(320px, 46vw); }
+  .who { font-size: 15px; letter-spacing: .2em; text-shadow: 0 1px 4px #000; margin-bottom: 4px; }
+  .who small { opacity: .8; font-size: 12px; margin-left: 6px; }
+  .bar { position: relative; height: 14px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,240,210,.5); border-radius: 3px; overflow: hidden; margin-bottom: 5px; }
+  .bar > div { position: absolute; left: 0; top: 0; bottom: 0; }
+  #hpLag { background: #f3d08a; } #hpFill { background: linear-gradient(#e2484a, #9e1c22); transition: width .08s; }
+  #hpFill.low { animation: pulse .6s infinite alternate; }
+  @keyframes pulse { to { filter: brightness(1.6); } }
+  .bar.st { height: 7px; } #stFill { background: linear-gradient(#f6e27a, #c79b2a); }
+  .bar.ki { height: 9px; } #kiFill { background: linear-gradient(#8fe0ff, #2b7fc0); }
+  #kiBar.full { box-shadow: 0 0 12px #7fd0ff; border-color: #bfe8ff; }
+  #kiBar.full::after { content: '奥義 [R]'; position: absolute; right: 4px; top: -2px; font-size: 10px; color: #fff; text-shadow: 0 0 4px #000; }
+  body.touch #kiBar.full::after { content: '奥義'; }
+
+  #progress { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); width: min(520px, 44vw); }
+  #ptrack { position: relative; height: 4px; background: rgba(255,240,210,.45); border-radius: 2px; margin-top: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  .pz { position: absolute; top: -4px; transform: translateX(-50%); }
+  .pz i { display: block; width: 12px; height: 12px; border-radius: 50%; background: #f3ead6; border: 2px solid #4a3a2a; margin: 0 auto; }
+  .pz span { display: block; font-size: 11px; margin-top: 3px; white-space: nowrap; text-shadow: 0 1px 3px #000; letter-spacing: .1em; }
+  .pz.castle i { background: var(--red); border-color: var(--gold); width: 14px; height: 14px; border-radius: 2px; transform: rotate(45deg); }
+  #pmark { position: absolute; top: -9px; width: 0; height: 0; transform: translateX(-50%); transition: left .2s linear; }
+  #pmark::before { content: '樽'; position: absolute; left: -11px; top: -2px; width: 22px; height: 22px; line-height: 22px; text-align: center; font-size: 12px; border-radius: 50%;
+    background: var(--indigo); color: #fff; border: 2px solid var(--gold); box-shadow: 0 0 8px rgba(0,0,0,.6); }
+
+  #banner { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); text-align: center; opacity: 0; text-shadow: 0 3px 18px rgba(0,0,0,.8); }
+  #banner.show { animation: banner 4.2s ease forwards; }
+  @keyframes banner { 0% { opacity: 0; letter-spacing: .1em; } 15% { opacity: 1; letter-spacing: .4em; } 75% { opacity: 1; } 100% { opacity: 0; letter-spacing: .5em; } }
+  #bannerName { font-size: clamp(40px, 7vw, 76px); font-weight: 800; }
+  #bannerKana { font-size: 16px; letter-spacing: .6em; color: var(--gold); }
+  #bannerSub { font-size: 18px; margin-top: 6px; letter-spacing: .3em; }
+  #banner .line { width: 280px; height: 2px; margin: 8px auto; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+
+  #toast { position: absolute; left: 50%; bottom: 23%; transform: translateX(-50%) translateY(10px); background: rgba(20,12,8,.78); border: 1px solid var(--gold); padding: 8px 18px; border-radius: 4px;
+    font-size: 16px; letter-spacing: .08em; opacity: 0; transition: .25s; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+  #toast.show { opacity: 1; transform: translateX(-50%); }
+  #prompt { position: absolute; left: 50%; bottom: 31%; transform: translateX(-50%); background: rgba(243,234,214,.92); color: var(--ink); padding: 6px 16px; border-radius: 20px; font-size: 15px; display: none; }
+  #prompt.show { display: block; }
+  #hint { position: absolute; right: 16px; top: 70px; background: rgba(20,12,8,.7); border: 1px solid rgba(217,180,90,.6); padding: 10px 14px; font-size: 13px; line-height: 1.9; border-radius: 6px; opacity: 0; transition: opacity .6s; }
+  #hint.show { opacity: 1; }
+  body.touch #hint { display: none; }
+  #thint { display: none; position: absolute; left: 50%; top: 22%; transform: translateX(-50%); background: rgba(20,12,8,.75); border: 1px solid rgba(217,180,90,.6); padding: 8px 14px; font-size: 13px; line-height: 1.8; border-radius: 6px; opacity: 0; transition: opacity .6s; text-align: center; white-space: nowrap; }
+  body.touch #thint { display: block; } #thint.show { opacity: 1; }
+  #rotate { z-index: 60; }
+  body { -webkit-touch-callout: none; overscroll-behavior: none; }
+  body.touch #joy { left: calc(40px + env(safe-area-inset-left)); }
+  body.touch #status { left: calc(12px + env(safe-area-inset-left)); }
+  body.touch .tb { margin-right: env(safe-area-inset-right); }
+  @media (max-height: 520px) {
+    #title { justify-content: flex-start; overflow-y: auto; padding-top: 22px; }
+    #title h1 { font-size: 40px; } #title .sub { font-size: 14px; margin: 2px 0; } #title .lead { font-size: 12px; line-height: 1.6; margin: 6px 0 10px; }
+    .menu { gap: 7px; } .btn { padding: 8px 14px; font-size: 16px; } .btn.ghost { padding: 6px; font-size: 13px; }
+    .card { padding: 16px 18px; } .card h2 { font-size: 22px; margin-bottom: 6px; } .keys, .tips { font-size: 12px; }
+    #dialog { padding: 14px 18px 16px; bottom: 3%; } #dText { font-size: 15px; min-height: 3.2em; }
+    #banner { top: 16%; } #bannerName { font-size: 42px; }
+    body.touch #boss { top: 52px; }
+    .tb[data-btn=atk] { width: 76px; height: 76px; bottom: 22px; right: 20px; }
+    .tb[data-btn=dodge] { bottom: 16px; right: 108px; } .tb[data-btn=jump] { bottom: 112px; right: 26px; }
+    .tb[data-btn=blk] { bottom: 88px; right: 98px; } .tb[data-btn=sp] { bottom: 30px; right: 178px; }
+    .tb[data-btn=lock] { bottom: 158px; right: 98px; } .tb[data-btn=talk] { bottom: 180px; right: 30px; }
+    #toast { bottom: 30%; font-size: 13px; } #prompt { bottom: 40%; }
+  }
+
+  #boss { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(640px, 80vw); opacity: 0; transition: opacity .5s; text-align: center; }
+  #boss.show { opacity: 1; }
+  #boss .nm { font-size: 18px; letter-spacing: .3em; text-shadow: 0 2px 6px #000; margin-bottom: 4px; }
+  #boss .bar { height: 12px; border-color: var(--gold); } #bossFill { background: linear-gradient(#c8323a, #6a0f14); transition: width .15s; }
+  body.touch #boss { bottom: auto; top: 64px; width: 60vw; }
+
+  #bars .ebar { position: absolute; left: 0; top: 0; width: 70px; margin-left: -35px; margin-top: -18px; text-align: center; display: none; }
+  .ename { font-size: 10px; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+  .etrack { height: 5px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.4); }
+  .efill { height: 100%; background: #e04040; }
+  .ebar.stag .efill { background: #48a8ff; }
+  #dmgLayer .dmg { position: absolute; left: 0; top: 0; font-size: 20px; font-weight: 800; color: #fff3c4; text-shadow: 0 0 4px #000, 0 2px 0 #7a3a10; display: none; font-family: system-ui, sans-serif; margin-left: -10px; }
+  #dmgLayer .dmg.crit { color: #ffd04a; font-size: 26px; }
+  #lock { position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -17px; border: 2px solid #ffde7a; border-radius: 50%; display: none; box-shadow: 0 0 8px #ffb030; }
+  #lock::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #ffde7a; opacity: .7; }
+  #hurt { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 50%, rgba(200,0,0,.55)); opacity: 0; }
+  #hurt.on { animation: hurt .5s ease-out; }
+  @keyframes hurt { from { opacity: 1; } to { opacity: 0; } }
+
+  /* 会話 */
+  #dialog { position: fixed; left: 50%; bottom: 5%; transform: translateX(-50%); width: min(820px, 94vw); z-index: 20; display: none;
+    background: linear-gradient(rgba(25,15,10,.92), rgba(15,9,6,.94)); border: 2px solid var(--gold); border-radius: 8px; padding: 20px 24px 22px; box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+  #dialog.show { display: block; }
+  #dName { position: absolute; top: -16px; left: 18px; background: var(--red); border: 2px solid var(--gold); padding: 3px 16px; font-size: 16px; letter-spacing: .2em; border-radius: 4px; }
+  #dText { font-size: clamp(16px, 2.2vw, 20px); line-height: 1.8; min-height: 3.6em; }
+  #dialog.narr #dText { font-style: italic; color: #f6e6c0; text-align: center; }
+  #dialog .next { position: absolute; right: 16px; bottom: 8px; font-size: 12px; opacity: .8; animation: bob 1s infinite; }
+  @keyframes bob { 50% { transform: translateY(3px); } }
+
+  /* タッチ操作 */
+  #touchLayer { position: fixed; inset: 0; z-index: 12; display: none; }
+  body.touch.playing #touchLayer { display: block; }
+  body.touch #progress { left: auto; right: 64px; transform: none; width: 42vw; }
+  #joy { position: absolute; left: 40px; bottom: 40px; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(255,240,210,.4); background: rgba(0,0,0,.2); opacity: .45; pointer-events: none; }
+  #joy.on { opacity: .9; }
+  #joyKnob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(243,234,214,.75); }
+  .tb { position: absolute; border-radius: 50%; border: 2px solid rgba(217,180,90,.85); background: rgba(30,18,12,.55); color: #fff3dc; font-size: 17px; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .tb.on { background: rgba(179,40,44,.8); }
+  .tb[data-btn=atk] { right: 26px; bottom: 34px; width: 86px; height: 86px; font-size: 24px; }
+  .tb[data-btn=dodge] { right: 124px; bottom: 26px; width: 62px; height: 62px; }
+  .tb[data-btn=jump] { right: 34px; bottom: 132px; width: 62px; height: 62px; }
+  .tb[data-btn=blk] { right: 112px; bottom: 104px; width: 62px; height: 62px; }
+  .tb[data-btn=sp] { right: 196px; bottom: 50px; width: 54px; height: 54px; font-size: 15px; border-color: #7fd0ff; }
+  .tb[data-btn=lock] { right: 110px; bottom: 182px; width: 48px; height: 48px; font-size: 14px; }
+  .tb[data-btn=talk] { right: 40px; bottom: 210px; width: 50px; height: 50px; font-size: 15px; }
+  #btnPauseMobile { position: fixed; right: 12px; top: 12px; z-index: 13; display: none; background: rgba(0,0,0,.45); color: #fff; border: 1px solid rgba(255,255,255,.5); border-radius: 6px; padding: 6px 10px; }
+  body.touch #hud.show ~ #btnPauseMobile { display: block; }
+  @media (max-width: 1100px) { #status { width: min(300px, 34vw); } #progress { left: auto; right: 24px; transform: none; width: 40vw; } }
+  @media (max-width: 700px) {
+    #status { width: 44vw; left: 12px; top: 10px; } .who small { display: none; }
+    #progress { top: auto; bottom: auto; top: 12px; left: auto; right: 64px; transform: none; width: 40vw; }
+    .pz span { font-size: 9px; }
+    #bannerSub { font-size: 14px; }
+  }
+</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="loading"><p>琉球の地を描いています……</p></div>
+
+<div id="hud">
+  <div id="status">
+    <div class="who">樽金 <small>読谷山の百姓</small></div>
+    <div class="bar"><div id="hpLag"></div><div id="hpFill"></div></div>
+    <div class="bar st"><div id="stFill"></div></div>
+    <div class="bar ki" id="kiBar"><div id="kiFill"></div></div>
+  </div>
+  <div id="progress"><div id="ptrack"><div id="pmark"></div></div></div>
+  <div id="banner"><div id="bannerKana"></div><div id="bannerName"></div><div class="line"></div><div id="bannerSub"></div></div>
+  <div id="bars"></div>
+  <div id="dmgLayer"></div>
+  <div id="lock"></div>
+  <div id="toast"></div>
+  <div id="prompt"></div>
+  <div id="hint">
+    <b>WASD</b> 移動 / <b>マウス</b> 視点<br>
+    <b>左クリック</b> 攻撃(連打で連撃)<br>
+    <b>右クリック</b> 防御(当たる瞬間で見切り)<br>
+    <b>Shift</b> 回避 / <b>Space</b> 跳躍<br>
+    <b>Q</b> 注目 / <b>R</b> 奥義 / <b>E</b> 話す
+  </div>
+  <div id="thint">左側をなぞって移動 / 右側をなぞって視点<br>「撃」攻撃(連打で連撃) 「防」長押しで防御<br>「避」前転で回避 「狙」敵に注目 「奥義」気が満ちたら</div>
+  <div id="boss"><div class="nm">海賊頭 黒鮫</div><div class="bar"><div id="bossFill"></div></div></div>
+  <div id="hurt"></div>
+</div>
+
+<div id="dialog"><span id="dName"></span><div id="dText"></div><div class="next" id="dNext">▼ クリック / Enter</div></div>
+
+<div id="touchLayer">
+  <div id="joy"><div id="joyKnob"></div></div>
+  <div class="tb" data-btn="atk">撃</div>
+  <div class="tb" data-btn="dodge">避</div>
+  <div class="tb" data-btn="jump">跳</div>
+  <div class="tb" data-btn="blk">防</div>
+  <div class="tb" data-btn="sp">奥義</div>
+  <div class="tb" data-btn="lock">狙</div>
+  <div class="tb" data-btn="talk">話</div>
+</div>
+<button id="btnPauseMobile">||</button>
+
+<div id="title">
+  <div class="bingata top"></div>
+  <div class="sub">〜 読谷山から首里へ 〜</div>
+  <h1>琉球<em>道中</em>記</h1>
+  <p class="lead">時は十六世紀、琉球王国。読谷山の沖に海賊船が現れた。<br>百姓・樽金(タルガニ)は、王府に急を知らせるため、<br>北谷の浜、浦添の森を抜け、首里城を目指す——。</p>
+  <div class="menu">
+    <button class="btn" id="btnStart">はじめから</button>
+    <button class="btn sub2 hidden" id="btnContinue">拝所からつづける</button>
+    <button class="btn ghost" id="btnHow">操作説明</button>
+    <button class="btn ghost" id="btnMute">♪ 音:オン</button>
+  </div>
+  <div class="bingata bot"></div>
+</div>
+
+<div class="panel" id="rotate"><div class="card">
+  <h2>横向きがおすすめ</h2>
+  <p>スマホを横向きにすると、広い視界で遊べます。</p>
+  <div class="menu"><button class="btn ghost" id="btnRotateOk">このまま遊ぶ</button></div>
+</div></div>
+
+<div class="panel" id="howto"><div class="card">
+  <h2>操作説明</h2>
+  <div class="keys">
+    <b>W A S D</b><span>移動(矢印キーでも可)</span>
+    <b>マウス</b><span>視点の回転(画面クリックでマウスを固定)/ ホイールで距離</span>
+    <b>左クリック / J</b><span>攻撃 — 連打で三段の連撃</span>
+    <b>右クリック / L</b><span>防御(押し続ける)— 敵の攻撃が当たる直前に構えると「見切り」</span>
+    <b>Shift / K</b><span>回避の前転(無敵時間あり・気力を消費)</span>
+    <b>Space</b><span>跳躍</span>
+    <b>Q / Tab</b><span>注目(ロックオン)の切り替え</span>
+    <b>R</b><span>奥義「旋風」— 気が満ちたときに使える</span>
+    <b>E</b><span>話す / 会話を進める</span>
+    <b>Esc</b><span>一時停止</span>
+  </div>
+  <div class="tips">
+    ・敵の頭上に <b style="color:#c22">!</b> が出たら攻撃の合図。防御か回避で備えよう。<br>
+    ・「見切り」に成功すると敵が崩れ、与えるダメージが大きくなる。<br>
+    ・赤い円は受け止められない大技。前転で範囲の外へ逃れよう。<br>
+    ・道中の拝所(ウガンジュ)で体力が回復し、倒れてもそこから再開できる。<br>
+    ・スマホ・タブレット:画面左側をなぞって移動、右側をなぞって視点。「撃」攻撃、「防」長押しで防御、「避」回避、「跳」跳躍、「狙」注目、「奥義」、「話」会話。
+  </div>
+  <div class="menu"><button class="btn" id="btnHowClose">閉じる</button></div>
+</div></div>
+
+<div class="panel" id="pause"><div class="card">
+  <h2>一時停止</h2>
+  <div class="menu">
+    <button class="btn" id="btnResume">再開する</button>
+    <button class="btn ghost" id="btnPauseHow">操作説明</button>
+    <button class="btn ghost" id="btnTitle">タイトルへ戻る</button>
+  </div>
+</div></div>
+
+<div class="panel" id="gameover"><div class="card">
+  <h2>力尽きた……</h2>
+  <p>しかし、王府に知らせを届けるまでは倒れられない。</p>
+  <div class="menu"><button class="btn" id="btnRetry">拝所から立ち上がる</button></div>
+</div></div>
+
+<div class="panel" id="ending"><div class="card">
+  <h2>琉球道中記 — 完</h2>
+  <p>樽金の知らせにより、王府は海賊の残党を退けた。<br>読谷山の百姓が首里城を救った話は、<br>三線の唄となって島じゅうに広まったという。</p>
+  <div class="stats">
+    <span>道中の時間</span><span id="stTime"></span>
+    <span>退けた敵</span><span id="stKills"></span>
+    <span>見切り</span><span id="stParry"></span>
+    <span>受けた傷</span><span id="stTaken"></span>
+  </div>
+  <div class="menu"><button class="btn" id="btnEndTitle">タイトルへ</button></div>
+</div></div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
