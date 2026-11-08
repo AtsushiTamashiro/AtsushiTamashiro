@@ -102,6 +102,12 @@
   .tb { width: 72px; height: 72px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); background: rgba(0,0,0,.35); font-size: 32px; display: flex; align-items: center; justify-content: center; }
   .tb.on { background: rgba(255,180,46,.6); }
   #tTalk { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 260px; z-index: 11; width: auto; padding: 0 18px; border-radius: 36px; font-size: 20px; font-weight: 800; background: rgba(255,180,46,.85); color: #222; }
+  .tb small { display: block; font-size: 11px; font-weight: 800; margin-top: -4px; }
+  .tb:has(small) { flex-direction: column; line-height: 1.1; background: rgba(76,175,80,.55); }
+  .moin.scream { font-size: clamp(64px, 14vw, 150px); color: #ff4d2e; animation-duration: 1.1s; }
+  .moin.laugh { color: #ffe14d; animation-name: moin, wobble; animation-duration: .9s, .25s; animation-iteration-count: 1, 4; }
+  .moin.timid { font-size: clamp(30px, 6vw, 60px); color: #cfd9e8; text-shadow: 0 3px 0 #475b78, 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; animation-duration: 1.4s; }
+  @keyframes wobble { 50% { margin-top: -14px; } }
   #pause { background: rgba(0,0,0,.35); z-index: 25; cursor: pointer; }
   @media (max-width: 560px) { .slot { width: 38px; height: 38px; } .slot img { width: 28px; height: 28px; } .slot .k { display: none; } #hotbar { gap: 2px; } }
   @media (max-height: 460px) { #tbtns { bottom: 64px; grid-template-columns: repeat(2, 60px); gap: 8px; } .tb { width: 60px; height: 60px; font-size: 26px; } #tTalk { bottom: 210px; } #dialog { bottom: 60px; } }
@@ -140,7 +146,7 @@
   <div id="joy"><i></i></div>
   <div id="tbtns">
     <button class="tb" id="tPlace">🧱</button><button class="tb" id="tMine">⛏️</button>
-    <button class="tb" id="tFly">🕊️</button><button class="tb" id="tJump">⤒</button>
+    <button class="tb" id="tFly">🕊️</button><button class="tb" id="tJump"><span>⤒</span><small>ジャンプ</small></button>
   </div>
   <button class="tb hide" id="tTalk">💬 はなす</button>
 </div>
@@ -164,12 +170,13 @@
   <div class="row" style="display:block"><label>自分の声で「モイン!」</label>
     <div class="btnrow" style="margin-top:8px"><button class="btn orange small" id="sRec">🎙️ 録音する(1.6秒)</button><button class="btn small" id="sTest">▶ ためす</button><button class="btn gray small" id="sRecDel">けす</button></div>
     <p class="note" id="sRecNote">録音すると、こわすたびにあなたの声で叫びます(声はこの端末の中だけに保存されます)。</p></div>
+  <div class="row"><label for="sVariety">いろいろな声(笑い・叫び・自信なし)</label><input type="checkbox" id="sVariety"></div>
   <div class="row"><label for="sCreative">クリエイティブ(ブロック無限・すばやく採掘)</label><input type="checkbox" id="sCreative"></div>
   <div class="row"><label for="sSens">視点の感度</label><input type="range" id="sSens" min="0.3" max="2.5" step="0.05"></div>
   <div class="row"><label for="sDist">見える距離</label><select id="sDist"><option value="60">近い(軽い)</option><option value="90">ふつう</option><option value="130">遠い</option></select></div>
   <div class="btnrow" style="margin-top:14px;justify-content:space-between">
     <button class="btn gray small" id="sTitle">タイトルへ(保存)</button><button class="btn small" id="setClose">ゲームにもどる</button></div>
-  <p class="note">PC: WASD 移動 / Space ジャンプ / Shift ダッシュ / F 飛ぶ(飛行中は Space 上昇・Shift 下降)/ 左クリック長押し こわす / 右クリック 置く / 1〜9・ホイール ブロック選択 / E はなす / I もちもの / H 村にもどる(自宅へ)</p>
+  <p class="note">PC: WASD 移動 / Space ジャンプ(2ブロックの壁も越えられる)/ Shift ダッシュ / F 飛ぶ(飛行中は Space 上昇・Shift 下降)/ 左クリック長押し こわす / 右クリック 置く / 1〜9・ホイール ブロック選択 / E はなす / I もちもの / H 村にもどる(自宅へ)</p>
 </div></div>
 
 <script type="module" src="./js/main.js"></script>

@@ -12,9 +12,10 @@ const SAVE_KEY = 'moincraft-save-v1', SET_KEY = 'moincraft-settings-v1';
 const isTouch = matchMedia('(pointer: coarse)').matches || (!matchMedia('(pointer: fine)').matches && 'ontouchstart' in window);
 const DAY_LEN = 600; // 秒で1日
 const REACH = 6;
+const JUMP_V = 10.9; // 重力26 → 約2.3ブロックの高さ(2段の壁を越えられる)
 
 // ---- 設定 ----
-const settings = Object.assign({ voice: 'auto', vol: 1, creative: false, sens: 1, dist: isTouch ? 60 : 90 }, load(SET_KEY) || {});
+const settings = Object.assign({ voice: 'auto', vol: 1, creative: false, variety: true, sens: 1, dist: isTouch ? 60 : 90 }, load(SET_KEY) || {});
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
@@ -58,7 +59,7 @@ const stars = (() => {
 let world, chunks = new Map(), npcs = [], state = 'loading';
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), w: 0.3, h: 1.75, yaw: 0, pitch: 0, onGround: false, fly: false, stepT: 0 };
 let inv = {}, hotbar = [], sel = 0, flags = {}, moinCount = 0, dayTime = 0.3;
-const voice = new MoinVoice(); voice.mode = settings.voice; voice.setVolume(settings.vol);
+const voice = new MoinVoice(); voice.mode = settings.voice; voice.variety = settings.variety; voice.setVolume(settings.vol);
 
 function newGameState() {
   inv = { [PLANKS]: 12, [GLASS]: 4, [MOIN]: 2 };
@@ -179,16 +180,23 @@ function updateParts(dt) {
 
 // ---- モイン! 演出 ----
 let shake = 0;
+const STYLE_FX = {
+  normal: { texts: ['モイン!', 'モイン!', 'モイン!', 'モイ〜〜ン!!', 'モモモイン!'], shake: 0.25 },
+  laugh: { texts: ['ハハッ モイン!', 'ウフフ…モイン!', 'アハハ モイン!'], shake: 0.3 },
+  scream: { texts: ['モイーーーン!!!', 'モイ〜〜〜ン!!!', 'モイン!!!!!'], shake: 0.7 },
+  timid: { texts: ['も、モイン…?', 'モ…モイン…?', 'モ、モイン…'], shake: 0.05 },
+};
 function moinFx() {
-  voice.shout();
+  const style = voice.shout();
   moinCount++; updateMoinCount();
-  const el = document.createElement('div'); el.className = 'moin';
-  el.textContent = Math.random() < 0.12 ? 'モイ〜〜ン!!' : Math.random() < 0.1 ? 'モモモイン!' : 'モイン!';
-  el.style.setProperty('--r', ((Math.random() - 0.5) * 24).toFixed(1) + 'deg');
+  const fx = STYLE_FX[style] || STYLE_FX.normal;
+  const el = document.createElement('div'); el.className = 'moin ' + style;
+  el.textContent = fx.texts[Math.random() * fx.texts.length | 0];
+  el.style.setProperty('--r', ((Math.random() - 0.5) * (style === 'timid' ? 8 : 24)).toFixed(1) + 'deg');
   el.style.setProperty('--dx', ((Math.random() - 0.5) * 160).toFixed(0) + 'px');
   $('moins').appendChild(el); setTimeout(() => el.remove(), 950);
   const f = $('flash'); f.style.opacity = 1; setTimeout(() => f.style.opacity = 0, 90);
-  shake = 0.25;
+  shake = fx.shake;
   // 近くの村人もつられて「モイン!」
   for (const n of npcs) if (n.pos.distanceTo(player.pos) < 9) setTimeout(() => n.sayMoin(1.4), 150 + Math.random() * 500);
   if (moinCount === 1) toast('はじめての「モイン!」');
@@ -248,7 +256,7 @@ $('bSettings0').addEventListener('click', openSettings);
 for (const p of ['invPanel', 'setPanel']) $(p).addEventListener('pointerdown', e => { if (e.target.id === p) closePanels(); });
 
 function openSettings() {
-  $('sVoice').value = settings.voice; $('sVol').value = settings.vol; $('sCreative').checked = settings.creative;
+  $('sVoice').value = settings.voice; $('sVol').value = settings.vol; $('sCreative').checked = settings.creative; $('sVariety').checked = settings.variety;
   $('sSens').value = settings.sens; $('sDist').value = String(settings.dist);
   $('sTitle').classList.toggle('hide', state === 'title'); $('setClose').textContent = state === 'title' ? 'とじる' : 'ゲームにもどる';
   updateRecNote();
@@ -258,10 +266,12 @@ function updateRecNote() { $('sRecNote').textContent = voice.recBuffer ? '録音
 $('sVoice').addEventListener('change', e => { settings.voice = voice.mode = e.target.value; store(SET_KEY, settings); voice.unlock(); voice.shout(); });
 $('sVol').addEventListener('input', e => { settings.vol = +e.target.value; voice.setVolume(settings.vol); store(SET_KEY, settings); });
 $('sVol').addEventListener('change', () => { voice.unlock(); voice.shout(); });
+$('sVariety').addEventListener('change', e => { settings.variety = voice.variety = e.target.checked; store(SET_KEY, settings); });
 $('sCreative').addEventListener('change', e => { settings.creative = e.target.checked; store(SET_KEY, settings); refreshHotbar(); });
 $('sSens').addEventListener('input', e => { settings.sens = +e.target.value; store(SET_KEY, settings); });
 $('sDist').addEventListener('change', e => { settings.dist = +e.target.value; store(SET_KEY, settings); });
-$('sTest').addEventListener('click', () => { voice.unlock(); voice.lastShout = 0; voice.shout(); });
+let testStyle = -1; const STYLES = ['normal', 'laugh', 'scream', 'timid'], STYLE_JA = { normal: 'ふつう', laugh: '笑いながら', scream: '叫ぶ', timid: '自信なし' };
+$('sTest').addEventListener('click', () => { voice.unlock(); voice.lastShout = 0; testStyle = (testStyle + 1) % 4; const st = STYLES[testStyle]; voice.shout(st); $('sTest').textContent = `▶ ためす(${STYLE_JA[st]})`; });
 $('sRecDel').addEventListener('click', () => { voice.clearRecording(); updateRecNote(); });
 $('sRec').addEventListener('click', async () => {
   const b = $('sRec');
@@ -513,7 +523,7 @@ function updatePlayer(dt) {
     player.vel.y = Math.max(-3, Math.min(3.2, player.vel.y));
   } else {
     player.vel.y -= 26 * dt;
-    if (jump && player.onGround) player.vel.y = 8.4;
+    if (jump && player.onGround) player.vel.y = JUMP_V;
     player.vel.y = Math.max(-40, player.vel.y);
   }
   const hadGround = player.onGround;

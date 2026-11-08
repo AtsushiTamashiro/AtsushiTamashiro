@@ -7,7 +7,7 @@ export class MoinVoice {
     this.ctx = null; this.master = null;
     this.mode = 'auto'; this.volume = 1;
     this.recBuffer = null; this.jaVoice = null;
-    this.lastShout = 0;
+    this.lastShout = 0; this.variety = true; this.lastStyle = 'normal';
     if ('speechSynthesis' in window) {
       const pick = () => { const vs = speechSynthesis.getVoices(); this.jaVoice = vs.find(v => /ja[-_]JP/i.test(v.lang)) || vs.find(v => /^ja/i.test(v.lang)) || null; };
       pick(); speechSynthesis.addEventListener?.('voiceschanged', pick);
@@ -42,73 +42,138 @@ export class MoinVoice {
     return 'synth';
   }
 
-  shout() {
-    const now = performance.now();
-    if (now - this.lastShout < 120) return; // 連打で音が潰れないように
-    this.lastShout = now;
-    const m = this.resolvedMode();
-    if (m === 'speech') this.speak();
-    else if (m === 'rec') this.playRec();
-    else this.synth();
+  // 声のスタイル: normal(ふつう) / laugh(笑いながら) / scream(叫ぶ) / timid(自信なし)
+  pickStyle() {
+    if (!this.variety) return 'normal';
+    const r = Math.random();
+    return r < 0.34 ? 'normal' : r < 0.56 ? 'laugh' : r < 0.78 ? 'scream' : 'timid';
   }
 
-  speak() {
-    if (!('speechSynthesis' in window)) return this.synth();
+  shout(style) {
+    const now = performance.now();
+    if (now - this.lastShout < 120) return this.lastStyle || 'normal'; // 連打で音が潰れないように
+    this.lastShout = now;
+    style = style || this.pickStyle(); this.lastStyle = style;
+    const m = this.resolvedMode();
+    if (m === 'speech') this.speak(style);
+    else if (m === 'rec') this.playRec(style);
+    else this.synth(style);
+    return style;
+  }
+
+  speak(style = 'normal') {
+    if (!('speechSynthesis' in window)) return this.synth(style);
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance('モイン！');
+    const P = {
+      normal: { t: 'モイン！', rate: 1.15, pitch: 0.9 + Math.random() * 0.8, vol: 1 },
+      laugh: { t: 'あはははは！モイン！あはは！', rate: 1.3, pitch: 1.5 + Math.random() * 0.4, vol: 1 },
+      scream: { t: 'モイーーーン！！！', rate: 0.85, pitch: 1.6 + Math.random() * 0.4, vol: 1 },
+      timid: { t: 'も、モイン…？', rate: 0.7, pitch: 0.6 + Math.random() * 0.25, vol: 0.55 },
+    }[style];
+    const u = new SpeechSynthesisUtterance(P.t);
     u.lang = 'ja-JP'; if (this.jaVoice) u.voice = this.jaVoice;
-    u.volume = Math.min(1, this.volume); u.rate = 1.15; u.pitch = 0.9 + Math.random() * 0.8;
+    u.volume = Math.min(1, this.volume * P.vol); u.rate = P.rate; u.pitch = P.pitch;
     speechSynthesis.speak(u);
   }
 
-  // フォルマント合成で「モ・イ・ン！」と叫ぶ
-  synth() {
-    const ctx = this.ctx; if (!ctx) return;
-    const t0 = ctx.currentTime + 0.01, p = 0.9 + Math.random() * 0.35;
+  // フォルマント合成で「モ・イ・ン！」。o: f0(基本の高さ), k(時間の伸び), gain, grit(ひずみ), vibD/vibR(ビブラート), pitch(高さの変化), open(口の開き)
+  moinSyl(t0, o = {}) {
+    const ctx = this.ctx;
+    const k = o.k ?? 1, f0 = o.f0 ?? 230, gain = o.gain ?? 0.9, vibD = o.vibD ?? 0.03, vibR = o.vibR ?? 6, open = o.open ?? 1;
+    const pitch = o.pitch ?? [[0, 0.9], [0.2, 1.15], [0.38, 1.25], [0.8, 0.85]];
+    const end = 0.95 * k;
     const src = ctx.createOscillator(); src.type = 'sawtooth';
-    const f0 = 230 * p;
-    src.frequency.setValueAtTime(f0 * 0.9, t0);
-    src.frequency.linearRampToValueAtTime(f0 * 1.15, t0 + 0.2);
-    src.frequency.linearRampToValueAtTime(f0 * 1.25, t0 + 0.38);
-    src.frequency.linearRampToValueAtTime(f0 * 0.85, t0 + 0.8);
-    const vib = ctx.createOscillator(); vib.frequency.value = 6; const vg = ctx.createGain(); vg.gain.value = f0 * 0.03;
+    pitch.forEach(([t, m], i) => { const f = f0 * m; if (i === 0) src.frequency.setValueAtTime(f, t0); else src.frequency.linearRampToValueAtTime(f, t0 + t * k); });
+    const vib = ctx.createOscillator(); vib.frequency.value = vibR; const vg = ctx.createGain(); vg.gain.value = f0 * vibD;
     vib.connect(vg); vg.connect(src.frequency);
-
-    const grit = ctx.createWaveShaper(); const curve = new Float32Array(256);
-    for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * 2.2); }
+    const grit = ctx.createWaveShaper(); const curve = new Float32Array(256), gk = o.grit ?? 2.2;
+    for (let i = 0; i < 256; i++) { const x = i / 128 - 1; curve[i] = Math.tanh(x * gk); }
     grit.curve = curve;
     const out = ctx.createGain(); out.gain.value = 0;
     out.connect(grit); grit.connect(this.master); grit.connect(this.echo);
-
     // 母音: o → i
-    const fm = [[500, 520, 300], [850, 900, 2300], [2500, 2600, 3000]];
-    const fg = [1.0, 0.7, 0.35];
+    const fm = [[500, 520, 300], [850, 900, 2300], [2500, 2600, 3000]], fg = [1.0, 0.7, 0.35];
     const vowel = ctx.createGain(); vowel.gain.value = 0; vowel.connect(out);
-    fm.forEach(([a, b, c], k) => {
+    fm.forEach(([a, b, c], j) => {
       const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 7;
-      bp.frequency.setValueAtTime(a, t0); bp.frequency.setValueAtTime(b, t0 + 0.28); bp.frequency.linearRampToValueAtTime(c, t0 + 0.36);
-      const g = ctx.createGain(); g.gain.value = fg[k] * 4;
-      src.connect(bp); bp.connect(g); g.connect(vowel);
+      const m = j === 0 ? 1 : open;
+      bp.frequency.setValueAtTime(a * m, t0); bp.frequency.setValueAtTime(b * m, t0 + 0.28 * k); bp.frequency.linearRampToValueAtTime(c * (j === 0 ? 1 : open), t0 + 0.36 * k);
+      const g = ctx.createGain(); g.gain.value = fg[j] * 4; src.connect(bp); bp.connect(g); g.connect(vowel);
     });
     // 鼻音: m と n
     const nasal = ctx.createBiquadFilter(); nasal.type = 'lowpass'; nasal.frequency.value = 330; nasal.Q.value = 3;
     const ng = ctx.createGain(); ng.gain.value = 0; src.connect(nasal); nasal.connect(ng); ng.connect(out);
-
-    ng.gain.setValueAtTime(0, t0); ng.gain.linearRampToValueAtTime(1.2, t0 + 0.03); ng.gain.linearRampToValueAtTime(0.1, t0 + 0.09);
-    ng.gain.setValueAtTime(0.1, t0 + 0.5); ng.gain.linearRampToValueAtTime(1.3, t0 + 0.58); ng.gain.linearRampToValueAtTime(0, t0 + 0.85);
-    vowel.gain.setValueAtTime(0, t0 + 0.05); vowel.gain.linearRampToValueAtTime(1, t0 + 0.1);
-    vowel.gain.setValueAtTime(1, t0 + 0.48); vowel.gain.linearRampToValueAtTime(0, t0 + 0.58);
-    out.gain.setValueAtTime(0.0001, t0); out.gain.linearRampToValueAtTime(0.9, t0 + 0.04);
-    out.gain.setValueAtTime(0.9, t0 + 0.7); out.gain.linearRampToValueAtTime(0, t0 + 0.88);
-
-    src.start(t0); vib.start(t0); src.stop(t0 + 0.95); vib.stop(t0 + 0.95);
+    ng.gain.setValueAtTime(0, t0); ng.gain.linearRampToValueAtTime(1.2, t0 + 0.03 * k); ng.gain.linearRampToValueAtTime(0.1, t0 + 0.09 * k);
+    ng.gain.setValueAtTime(0.1, t0 + 0.5 * k); ng.gain.linearRampToValueAtTime(1.3, t0 + 0.58 * k); ng.gain.linearRampToValueAtTime(0, t0 + 0.85 * k);
+    vowel.gain.setValueAtTime(0, t0 + 0.05 * k); vowel.gain.linearRampToValueAtTime(1, t0 + 0.1 * k);
+    vowel.gain.setValueAtTime(1, t0 + 0.48 * k); vowel.gain.linearRampToValueAtTime(0, t0 + 0.58 * k);
+    out.gain.setValueAtTime(0.0001, t0); out.gain.linearRampToValueAtTime(gain, t0 + 0.04 * k);
+    out.gain.setValueAtTime(gain, t0 + 0.7 * k); out.gain.linearRampToValueAtTime(0, t0 + 0.88 * k);
+    src.start(t0); vib.start(t0); src.stop(t0 + end); vib.stop(t0 + end);
   }
 
-  playRec() {
-    if (!this.ctx || !this.recBuffer) return this.synth();
-    const s = this.ctx.createBufferSource(); s.buffer = this.recBuffer; s.playbackRate.value = 0.92 + Math.random() * 0.22;
-    const g = this.ctx.createGain(); g.gain.value = 2.2;
-    s.connect(g); g.connect(this.master); g.connect(this.echo); s.start();
+  // 「は!」という笑い声を n 回
+  ha(t0, n, f0) {
+    const ctx = this.ctx;
+    const src = ctx.createOscillator(); src.type = 'sawtooth';
+    const total = n * 0.115;
+    src.frequency.setValueAtTime(f0, t0); src.frequency.linearRampToValueAtTime(f0 * 0.8, t0 + total);
+    const out = ctx.createGain(); out.gain.value = 0; out.connect(this.master); out.connect(this.echo);
+    [[820, 1.0], [1250, 0.8], [2600, 0.3]].forEach(([f, g]) => {
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 6;
+      const gg = ctx.createGain(); gg.gain.value = g * 4; src.connect(bp); bp.connect(gg); gg.connect(out);
+    });
+    for (let i = 0; i < n; i++) {
+      const t = t0 + i * 0.115, peak = 0.75 * (1 - i / (n + 2));
+      out.gain.setValueAtTime(0.0001, t); out.gain.linearRampToValueAtTime(peak, t + 0.012); out.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    }
+    src.start(t0); src.stop(t0 + total + 0.05);
+    this.noiseAt(t0, total, 5000, 0.18);
+  }
+  noiseAt(t0, dur, freq, gain) {
+    const ctx = this.ctx, n = ctx.createBuffer(1, Math.max(1, ctx.sampleRate * dur | 0), ctx.sampleRate), d = n.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (0.5 + 0.5 * Math.abs(Math.sin(i / ctx.sampleRate * 55)));
+    const s = ctx.createBufferSource(); s.buffer = n; const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = freq;
+    const g = ctx.createGain(); g.gain.value = gain; s.connect(f); f.connect(g); g.connect(this.master); s.start(t0);
+  }
+
+  synth(style = 'normal') {
+    const ctx = this.ctx; if (!ctx) return;
+    const t0 = ctx.currentTime + 0.01, p = 0.9 + Math.random() * 0.35;
+    if (style === 'laugh') {
+      // 「はは、はは! モイン! はは…」
+      this.ha(t0, 4, 330 * p);
+      this.moinSyl(t0 + 0.5, { f0: 300 * p, k: 0.85, gain: 0.85, vibD: 0.07, vibR: 11, pitch: [[0, 1.0], [0.2, 1.3], [0.38, 1.4], [0.8, 1.0]], open: 1.1 });
+      this.ha(t0 + 1.25, 3, 300 * p);
+    } else if (style === 'scream') {
+      // のびて高くなる「モイーーン!!」
+      this.moinSyl(t0, { f0: 330 * p, k: 1.7, gain: 1.0, grit: 5, vibD: 0.02, vibR: 8, open: 1.25,
+        pitch: [[0, 0.9], [0.2, 1.3], [0.38, 1.7], [0.6, 1.75], [0.8, 1.2]] });
+      this.noiseAt(t0, 1.2, 2500, 0.1);
+    } else if (style === 'timid') {
+      // 「も、モイン…?」小さくふるえる声、語尾が上がる
+      this.moinSyl(t0, { f0: 170 * p, k: 0.38, gain: 0.3, vibD: 0.06, vibR: 7, pitch: [[0, 1], [0.8, 0.95]] });
+      this.moinSyl(t0 + 0.55, { f0: 185 * p, k: 1.35, gain: 0.34, vibD: 0.09, vibR: 5.5, grit: 1.2,
+        pitch: [[0, 0.95], [0.3, 0.85], [0.55, 0.8], [0.8, 1.25]] });
+    } else {
+      this.moinSyl(t0, { f0: 230 * p });
+    }
+  }
+
+  playRec(style = 'normal') {
+    if (!this.ctx || !this.recBuffer) return this.synth(style);
+    const ctx = this.ctx, jit = 0.92 + Math.random() * 0.22, now = ctx.currentTime + 0.01;
+    const play = (at, rate, gain, offset = 0, dur, sat = 0) => {
+      const s = ctx.createBufferSource(); s.buffer = this.recBuffer; s.playbackRate.value = rate;
+      const g = ctx.createGain(); g.gain.value = gain; let tail = g;
+      if (sat) { const w = ctx.createWaveShaper(), c = new Float32Array(256); for (let i = 0; i < 256; i++) c[i] = Math.tanh((i / 128 - 1) * sat); w.curve = c; g.connect(w); tail = w; }
+      s.connect(g); tail.connect(this.master); tail.connect(this.echo);
+      if (dur) s.start(at, offset, dur); else s.start(at, offset);
+    };
+    if (style === 'laugh') { this.ha(now, 3, 320 * jit); play(now + 0.4, 1.12 * jit, 2.0); this.ha(now + 0.4 + this.recBuffer.duration / 1.12 * 0.9, 3, 300); }
+    else if (style === 'scream') play(now, 1.2 + Math.random() * 0.2, 3.2, 0, undefined, 4);
+    else if (style === 'timid') { play(now, 0.88, 0.7, 0, Math.min(0.25, this.recBuffer.duration)); play(now + 0.55, 0.8 + Math.random() * 0.06, 0.8); }
+    else play(now, jit, 2.2);
   }
 
   // ---- 自分の声を録音 ----
