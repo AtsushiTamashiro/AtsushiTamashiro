@@ -207,7 +207,7 @@ class Game {
       this.audio.init();
       if (this.mode === 'dialog') { this.advanceDialog(); return; }
       if (this.mode !== 'play') return;
-      if (document.pointerLockElement !== cv && !this.isTouch) { cv.requestPointerLock?.(); }
+      if (document.pointerLockElement !== cv && !this.isTouch) { this.lockPointer(); }
       if (e.button === 0) { this.mouse.l = true; this.pressed.Mouse0 = true; }
       if (e.button === 2) this.mouse.r = true;
     });
@@ -262,6 +262,7 @@ class Game {
       b.addEventListener('touchend', up, { passive: false }); b.addEventListener('touchcancel', up, { passive: false });
     }
   }
+  lockPointer() { try { const r = this.canvas.requestPointerLock?.(); if (r && r.catch) r.catch(() => {}); } catch { /* 非対応 */ } }
   readInput() {
     const k = this.keys, p = this.pressed, tb = this.tbtn;
     let ix = 0, iy = 0;
@@ -344,7 +345,7 @@ class Game {
     const d = this.dialog; if (!d) return;
     if (!d.full) { d.shown = d.text.length; return; }
     d.i++;
-    if (d.i >= d.lines.length) { $('dialog').classList.remove('show'); this.dialog = null; this.mode = 'play'; d.onEnd && d.onEnd(); if (!this.isTouch && this.mode === 'play') this.canvas.requestPointerLock?.(); return; }
+    if (d.i >= d.lines.length) { $('dialog').classList.remove('show'); this.dialog = null; this.mode = 'play'; d.onEnd && d.onEnd(); if (!this.isTouch && this.mode === 'play') this.lockPointer(); return; }
     this.showLine();
   }
   updateDialog(dt) {
@@ -433,7 +434,7 @@ class Game {
     this.player.state = 'move'; this.player.ki = Math.max(this.player.ki, 30);
     this.spawnAtCheckpoint();
     this.mode = 'play';
-    if (!this.isTouch) this.canvas.requestPointerLock?.();
+    if (!this.isTouch) this.lockPointer();
   }
 
   // ---------------- 物語の進行 ----------------

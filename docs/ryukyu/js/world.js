@@ -13,6 +13,8 @@ export const SEIDEN = { x: 10, z: -1098 };
 
 const ELEV = [[60, 2], [-180, 2], [-260, 1.3], [-420, 1.4], [-500, 4], [-640, 9], [-780, 13], [-850, 16], [-960, 24], [-1020, 26], [-1300, 26]];
 const COAST = [[60, -85], [-150, -80], [-300, -66], [-380, -68], [-470, -85], [-560, -260], [-1300, -320]];
+// table() は x 昇順を前提にするため、z 降順で書いた表を反転しておく
+ELEV.reverse(); COAST.reverse();
 
 export const ZONES = [
   { id: 0, name: '読谷山', kana: 'ユムタン', sub: '百姓・樽金の村', zMax: Infinity },
@@ -66,6 +68,7 @@ const G = {
   cone: new THREE.ConeGeometry(1, 1, 8),
   cone3: new THREE.ConeGeometry(1, 1, 4),
   ico: new THREE.IcosahedronGeometry(1, 1),
+  ico0: new THREE.IcosahedronGeometry(1, 0),
   dodec: new THREE.DodecahedronGeometry(1, 0),
   halfCyl: new THREE.CylinderGeometry(1, 1, 1, 12, 1, false, -Math.PI / 2, Math.PI),
 };
@@ -615,22 +618,22 @@ export class World {
     // フクギ
     const fukugi = this.makeInstanced([
       [G.cyl6, M(0, 1.5, 0, 0, 0.22, 3, 0.22), '#4b3826'],
-      [G.ico, M(0, 4.2, 0, 0, 1.6, 3.2, 1.5), '#2f6b2a'],
-      [G.ico, M(0.3, 5.6, 0.2, 0.5, 1.1, 1.8, 1.1), '#3a7d31'],
+      [G.ico0, M(0, 4.2, 0, 0, 1.6, 3.2, 1.5), '#2f6b2a'],
+      [G.ico0, M(0.3, 5.6, 0.2, 0.5, 1.1, 1.8, 1.1), '#3a7d31'],
     ], 900);
     // 広葉樹
     const broad = this.makeInstanced([
       [G.cyl6, M(0, 1.6, 0, 0, 0.3, 3.2, 0.3), '#5a432c'],
-      [G.ico, M(0, 4.4, 0, 0, 2.8, 2.0, 2.6), '#3d7a30'],
-      [G.ico, M(1.2, 3.8, 0.6, 0, 1.8, 1.4, 1.8), '#4a8a37'],
-      [G.ico, M(-1.0, 4.0, -0.8, 0, 1.8, 1.5, 1.6), '#356d2b'],
+      [G.ico0, M(0, 4.4, 0, 0, 2.8, 2.0, 2.6), '#3d7a30'],
+      [G.ico0, M(1.2, 3.8, 0.6, 0, 1.8, 1.4, 1.8), '#4a8a37'],
+      [G.ico0, M(-1.0, 4.0, -0.8, 0, 1.8, 1.5, 1.6), '#356d2b'],
     ], 1600);
     // ガジュマル
     const gaj = this.makeInstanced([
       [G.cyl6, M(0, 1.5, 0, 0, 0.8, 3, 0.8), '#6b5a48'],
       [G.cyl6, M(0.9, 1.6, 0.3, 0, 0.1, 3.2, 0.1), '#6b5a48'], [G.cyl6, M(-0.8, 1.6, -0.5, 0, 0.1, 3.2, 0.1), '#6b5a48'],
       [G.cyl6, M(0.3, 1.6, -1.0, 0, 0.08, 3.2, 0.08), '#6b5a48'],
-      [G.ico, M(0, 4.6, 0, 0, 4.2, 2.4, 4.0), '#2e6427'], [G.ico, M(1.8, 4.0, 1.0, 0, 2.4, 1.6, 2.4), '#3b7530'],
+      [G.ico0, M(0, 4.6, 0, 0, 4.2, 2.4, 4.0), '#2e6427'], [G.ico0, M(1.8, 4.0, 1.0, 0, 2.4, 1.6, 2.4), '#3b7530'],
     ], 160);
     // ビロウ・ヤシ
     const palmParts = [];
