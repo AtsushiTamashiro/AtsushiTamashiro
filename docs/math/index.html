@@ -23,7 +23,7 @@
   --muted:#E6E9F2;
   --display:"Fredoka","M PLUS Rounded 1c","Hiragino Maru Gothic ProN",system-ui,sans-serif;
   --body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
-  --c:clamp(16px,4.6vw,30px);
+  --c:clamp(16px,min(4.6vw,4.2vh),30px);
   --line:4px solid var(--ink);
   --drop:5px 5px 0 var(--ink);
   --outline:2px 2px 0 var(--ink),-2px 2px 0 var(--ink),2px -2px 0 var(--ink),-2px -2px 0 var(--ink),0 3px 0 var(--ink),3px 0 0 var(--ink),-3px 0 0 var(--ink),0 -2px 0 var(--ink),4px 5px 0 var(--ink);
@@ -42,7 +42,7 @@ body{
   overflow-x:hidden;
   -webkit-tap-highlight-color:transparent;
 }
-button{font:inherit;color:inherit;cursor:pointer}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-offset:3px}
 
 .app{
@@ -239,7 +239,7 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
   display:flex;align-items:flex-end;justify-content:center;gap:clamp(6px,2vw,14px);flex-wrap:wrap;
   min-height:calc(var(--c)*5 + 24px);max-width:100%;
 }
-.scene.big{--c:clamp(14px,4vw,26px)}
+.scene.big{--c:clamp(12px,min(4vw,3.2vh),26px)}
 .op{font-family:var(--display);font-weight:700;font-size:calc(var(--c)*1.6);align-self:center;color:var(--ink);line-height:1}
 .groups{display:flex;gap:clamp(4px,1.6vw,10px);align-items:flex-end}
 .caption{font-weight:800;font-size:clamp(15px,4vw,18px);text-align:center;margin:-2px 0 0;
@@ -317,6 +317,16 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
 
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:50;width:100%;height:100%}
 
+/* Tablets held sideways (Fire HD 8/10 are about 960×600): blocks on the left, answers on the right, no scrolling */
+@media (orientation:landscape) and (min-width:700px){
+  .app{max-width:1000px}
+  #quiz{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);grid-template-rows:auto 1fr auto;gap:12px 20px;align-items:start}
+  #quiz .bar{grid-column:1/-1}
+  #quiz .stage{grid-column:1;grid-row:2/4}
+  #quiz .message{grid-column:2;grid-row:2;align-self:end}
+  #quiz .choices{grid-column:2;grid-row:3;grid-template-columns:1fr}
+  #quiz .choice{min-height:78px}
+}
 @media (max-width:480px){
   .dots{gap:3px}
   .dot{width:14px;height:14px;border-width:2px}
@@ -828,6 +838,11 @@ button:focus-visible,input:focus-visible{outline:5px solid var(--sun);outline-of
 
   syncToggles();
   show('home');
+
+  // Offline play on the hosted copy (GitHub Pages); the artifact viewer has no service workers.
+  if ('serviceWorker' in navigator && location.hostname.endsWith('github.io')){
+    try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch {}
+  }
 })();
 </script>
 </body>
