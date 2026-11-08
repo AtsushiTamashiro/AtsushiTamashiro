@@ -170,6 +170,13 @@
   <div class="row" style="display:block"><label>自分の声で「モイン!」</label>
     <div class="btnrow" style="margin-top:8px"><button class="btn orange small" id="sRec">🎙️ 録音する(1.6秒)</button><button class="btn small" id="sTest">▶ ためす</button><button class="btn gray small" id="sRecDel">けす</button></div>
     <p class="note" id="sRecNote">録音すると、こわすたびにあなたの声で叫びます(声はこの端末の中だけに保存されます)。</p></div>
+  <div class="row" style="display:block"><label>リアルおじさんの顔写真</label>
+    <div class="btnrow" style="margin-top:8px"><button class="btn orange small" id="sFaceBtn">📷 写真をえらぶ</button><button class="btn small" id="sFaceTalk">▶ 声をきく</button><button class="btn gray small" id="sFaceDel">もどす</button></div>
+    <input type="file" id="sFaceFile" accept="image/*" hidden>
+    <div class="row" style="border:0;padding:6px 0 0"><label for="sFaceZoom">顔の大きさ</label><input type="range" id="sFaceZoom" min="0.6" max="3" step="0.02"></div>
+    <div class="row" style="border:0;padding:0"><label for="sFaceDx">左右</label><input type="range" id="sFaceDx" min="-0.4" max="0.4" step="0.01"></div>
+    <div class="row" style="border:0;padding:0"><label for="sFaceDy">上下</label><input type="range" id="sFaceDy" min="-0.4" max="0.4" step="0.01"></div>
+    <p class="note" id="sFaceNote">写真は未設定(仮の描き顔)。</p><p class="note">写真はこの端末の中だけに保存され、どこにも送信されません。ご本人や、使うことに同意してくれた人の写真だけを使ってください。</p></div>
   <div class="row"><label for="sVariety">いろいろな声(笑い・叫び・自信なし)</label><input type="checkbox" id="sVariety"></div>
   <div class="row"><label for="sCreative">クリエイティブ(ブロック無限・すばやく採掘)</label><input type="checkbox" id="sCreative"></div>
   <div class="row"><label for="sSens">視点の感度</label><input type="range" id="sSens" min="0.3" max="2.5" step="0.05"></div>

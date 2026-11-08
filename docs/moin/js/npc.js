@@ -1,6 +1,7 @@
 // モイン村のNPC(敵はいません)
 import * as THREE from 'three';
 import { moveBody, inWater } from './physics.js';
+import { realFace } from './realface.js';
 import { BLOCKS, WATER, PLANKS, BRICK, GLASS, ROOF, LAMP, MOIN, RED, BLUE, YELLOW, GREEN, PINK, AIR } from './blocks.js';
 
 const pick = a => a[Math.random() * a.length | 0];
@@ -65,9 +66,35 @@ export const NPC_DEFS = [
       ? ['ほっほっ。モインの声は、元気のしるし。', pick(['大きな声で「モイン!」と言うと、ブロックもよろこぶんじゃ。', 'じぶんの声を録音して、こわすたびに叫ばせることもできるぞい。設定を見てみなされ。', 'モインとは「こんにちは」に似た、元気なあいさつのことばじゃ。'])]
       : ['ほっほっ。わしはモイン仙人。この島に「モイン!」の声を広めた者じゃ。', 'おぬしの「モイン!」、なかなか良い声じゃった。これをさずけよう。',
         { run: () => { g.give(MOIN, 8); g.flags.sennin = true; g.fanfare(); }, text: 'モインブロックを 8こ もらった!' }] },
+  { key: 'oyaji', name: 'おじさん', real: true, labelY: 2.1, greet: { text: '元気か!?', say: '元気か！？', k: 'genki' },
+    talk: g => oyajiTalk(g) },
   { key: 'chibi', name: 'ちびモイン', skin: '#f6d6b6', shirt: '#ff9ec7', pants: '#6fb7ff', hair: '#7a4a2a', hat: 'bow', small: true,
     talk: () => [pick(CHIBI)] },
 ];
+
+// リアルおじさんの会話。say は声で読み上げる文、k は録音ファイル(assets/voice/<k>.mp3)の名前
+const OYAJI_CLOSE = [
+  ['ちゃんと水分とれよ！', 'close1'], ['いい家は建てられたか？', 'close2'], ['大きな声で「モイン！」って言ってみな。スカッとするぞ！', 'close3'],
+  ['ハッハッハ！じゃあな！', 'close4'], ['ブロックは、こわすのも作るのも楽しいよなあ。', 'close5'],
+];
+function oyajiTalk(g) {
+  const close = () => { const [t, k] = pick(OYAJI_CLOSE); return [{ text: t, k }]; };
+  const enjoy = {
+    text: 'モインクラフト楽しいか？', k: 'tanoshii',
+    choices: [
+      { label: 'たのしい！', next: () => [{ text: 'そりゃあよかった！どんどんブロックをこわして、「モイン！」って叫べ！', k: 'yokatta' }, ...close()] },
+      { label: 'まあまあ', next: () => [{ text: 'そうか。じゃあ村の人たちと話してみろ。意外といいもん、くれるぞ。', k: 'maamaa' }, ...close()] },
+    ],
+  };
+  return [{
+    text: g.flags.oyaji ? 'おう、また来たな！元気か！？' : 'おう！元気か！？', k: g.flags.oyaji ? 'genki2' : 'genki',
+    run: () => { g.flags.oyaji = true; },
+    choices: [
+      { label: 'げんき！', next: () => [{ text: 'そうか、そうか！そりゃあ何よりだ。ハッハッハ！', k: 'genki_ok' }, enjoy] },
+      { label: 'ちょっとつかれた', next: () => [{ text: 'そうかそうか。無理すんなよ。水でも飲んで、ひと休みしな。', k: 'tsukareta' }, { text: 'ここは敵もいないんだ。のんびりやればいいさ。', k: 'nonbiri' }, enjoy] },
+    ],
+  }];
+}
 
 function quiz(g) {
   const a = 2 + (Math.random() * 8 | 0), b = 2 + (Math.random() * 8 | 0), ans = a * b;
@@ -112,14 +139,54 @@ function labelSprite(text) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthWrite: false, transparent: true }));
   s.scale.set(1.6, 0.4, 1); return s;
 }
-export function bubbleSprite() {
+export function bubbleSprite(text = 'モイン!') {
   const c = document.createElement('canvas'); c.width = 256; c.height = 96; const x = c.getContext('2d');
   x.fillStyle = '#fff'; x.beginPath(); x.roundRect?.(8, 6, 240, 62, 20); x.fill();
   x.beginPath(); x.moveTo(110, 66); x.lineTo(128, 90); x.lineTo(146, 66); x.fill();
-  x.fillStyle = '#e8590c'; x.font = 'bold 40px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('モイン!', 128, 38);
+  x.fillStyle = '#e8590c'; x.font = 'bold 40px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 128, 38);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthWrite: false, transparent: true }));
   s.scale.set(1.4, 0.52, 1); return s;
+}
+
+// ---- リアルなおじさん(人間らしい体つき+実写の顔テクスチャ) ----
+function buildRealModel(def) {
+  const g = new THREE.Group();
+  const mat = c => new THREE.MeshLambertMaterial({ color: c });
+  const skin = realFace.skinMat, shirt = mat('#6b86a8'), pants = mat('#3d424d'), shoe = mat('#2b2420');
+  const mesh = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); return o; };
+  const cyl = (rt, rb, h, seg = 14) => new THREE.CylinderGeometry(rt, rb, h, seg);
+  const legL = new THREE.Group(), legR = new THREE.Group(), armL = new THREE.Group(), armR = new THREE.Group(), head = new THREE.Group();
+  for (const [leg, sx] of [[legL, -1], [legR, 1]]) {
+    leg.add(mesh(cyl(0.085, 0.058, 0.86), pants, 0, -0.43, 0));
+    leg.add(mesh(new THREE.BoxGeometry(0.115, 0.075, 0.27), shoe, 0, -0.9, 0.05));
+    leg.position.set(sx * 0.1, 0.94, 0);
+  }
+  // 胴(すこし中年体型)
+  const torso = mesh(cyl(0.17, 0.155, 0.6, 18), shirt, 0, 1.24, 0); torso.scale.z = 0.66; g.add(torso);
+  const belly = mesh(new THREE.SphereGeometry(0.16, 16, 12), shirt, 0, 1.1, 0.03); belly.scale.set(1, 0.95, 0.85); g.add(belly);
+  const sh = mesh(new THREE.SphereGeometry(0.2, 16, 10), shirt, 0, 1.52, 0); sh.scale.set(1.02, 0.42, 0.55); g.add(sh);
+  g.add(mesh(cyl(0.052, 0.058, 0.12, 12), skin, 0, 1.6, 0));
+  for (const [arm, sx] of [[armL, -1], [armR, 1]]) {
+    arm.add(mesh(cyl(0.055, 0.05, 0.3, 10), shirt, 0, -0.15, 0));
+    arm.add(mesh(cyl(0.045, 0.038, 0.27, 10), skin, 0, -0.43, 0));
+    arm.add(mesh(new THREE.SphereGeometry(0.048, 10, 8), skin, 0, -0.6, 0));
+    arm.position.set(sx * 0.225, 1.5, 0);
+  }
+  // 頭: 球に正面から写真を貼る(うしろ半分は髪色)
+  const rx = 0.112, ry = 0.145, rz = 0.122;
+  const hg = new THREE.SphereGeometry(1, 40, 28), pos = hg.attributes.position, uv = hg.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    if (z > 0) uv.setXY(i, 0.5 + x * 0.5, 0.5 + y * 0.5); else uv.setXY(i, 0.01, 0.01);
+  }
+  hg.scale(rx, ry, rz);
+  const faceMat = new THREE.MeshLambertMaterial({ map: realFace.tex, emissive: 0xffffff, emissiveMap: realFace.tex, emissiveIntensity: 0.6 });
+  head.add(mesh(hg, faceMat, 0, 0.14, 0));
+  for (const sx of [-1, 1]) { const ear = mesh(new THREE.SphereGeometry(0.03, 10, 8), skin, sx * 0.104, 0.12, -0.005); ear.scale.set(0.45, 1, 0.7); head.add(ear); }
+  head.position.set(0, 1.64, 0);
+  g.add(legL, legR, armL, armR, head);
+  return { group: g, legL, legR, armL, armR, head };
 }
 
 function buildModel(def) {
@@ -164,10 +231,10 @@ export class NPC {
     this.vel = new THREE.Vector3(); this.w = 0.3; this.h = def.small ? 1.4 : 1.8;
     this.yaw = Math.random() * Math.PI * 2;
     this.target = null; this.wait = 1 + Math.random() * 3; this.walkT = 0; this.stuck = 0;
-    const m = buildModel(def); Object.assign(this, { model: m });
+    const m = def.real ? buildRealModel(def) : buildModel(def); Object.assign(this, { model: m });
     this.group = m.group;
-    this.label = labelSprite(def.name); this.label.position.y = def.small ? 2.7 : 2.35; this.group.add(this.label);
-    this.bubble = bubbleSprite(); this.bubble.position.y = def.small ? 3.2 : 2.85; this.bubble.visible = false; this.group.add(this.bubble);
+    this.label = labelSprite(def.name); this.label.position.y = def.labelY ?? (def.small ? 2.7 : 2.35); this.group.add(this.label);
+    this.bubble = bubbleSprite(def.greet?.text); this.bubble.position.y = (def.labelY ?? (def.small ? 2.7 : 2.35)) + 0.5; this.bubble.visible = false; this.group.add(this.bubble);
     this.bubbleT = 0; this.talking = false; this.greetCD = 3 + Math.random() * 6;
   }
 
@@ -219,7 +286,9 @@ export class NPC {
     this.label.visible = dP < 10;
     // 時々あいさつ
     this.greetCD -= dt;
-    if (this.greetCD < 0 && dP < 7 && !this.talking) { this.sayMoin(); this.greetCD = 8 + Math.random() * 10; }
+    if (this.greetCD < 0 && dP < 7 && !this.talking) {
+      if (this.greetCB) { this.greetCB(); this.greetCD = 45 + Math.random() * 30; } else { this.sayMoin(); this.greetCD = 8 + Math.random() * 10; }
+    }
     if (this.bubbleT > 0) { this.bubbleT -= dt; if (this.bubbleT <= 0) this.bubble.visible = false; }
   }
 
