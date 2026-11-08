@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>モインクラフト</title>
+<meta name="description" content="ブロックをこわすたびに「モイン!」と叫ぶ、敵のいないブロック建築ゲーム。モイン村の人たちと話しながら、自由にものづくり。">
+<meta name="theme-color" content="#3a8f3a">
+<style>
+  :root { --ink: #1d1a16; --paper: #fff8e8; --accent: #ffb52e; --accent2: #e8590c; --ok: #4caf50; --panel: rgba(24, 20, 16, .88); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #87c6ee; color: var(--paper);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hide { display: none !important; }
+  button { font: inherit; cursor: pointer; color: inherit; }
+
+  .screen { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; text-align: center; }
+  #loading { z-index: 60; background: #2b2118; font-size: 20px; letter-spacing: .15em; }
+  #loading pre { font-size: 12px; color: #f99; white-space: pre-wrap; max-width: 90vw; letter-spacing: 0; text-align: left; }
+  #title { background: linear-gradient(rgba(20,40,70,.15), rgba(20,20,10,.55)); }
+  .logo { font-size: clamp(42px, 10vw, 104px); font-weight: 900; letter-spacing: .06em; margin: 0; line-height: 1.1;
+    color: #ffd23f; text-shadow: 0 4px 0 #a85a12, 0 8px 0 #5a2e08, 0 14px 30px rgba(0,0,0,.5); transform: rotate(-2deg); }
+  .logo small { display: block; font-size: .28em; color: #fff; text-shadow: 0 2px 0 #333; letter-spacing: .3em; margin-top: 10px; }
+  .shout { display: inline-block; margin-top: 14px; padding: 6px 16px; background: #fff; color: var(--accent2); border-radius: 18px; font-weight: 900; font-size: 20px;
+    box-shadow: 0 4px 0 rgba(0,0,0,.25); animation: bob 1.4s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px) rotate(3deg); } }
+  .lead { max-width: 560px; line-height: 1.9; font-size: 15px; margin: 18px 0 22px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  .menu { display: flex; flex-direction: column; gap: 12px; width: min(320px, 88vw); }
+  .btn { background: linear-gradient(#7dc457, #4a8f2c); border: 3px solid #2d5a18; border-radius: 10px; padding: 12px 16px; font-size: 19px; font-weight: 800;
+    box-shadow: 0 5px 0 #23460f, 0 8px 18px rgba(0,0,0,.35); text-shadow: 0 2px 0 rgba(0,0,0,.35); letter-spacing: .08em; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #23460f; }
+  .btn.gray { background: linear-gradient(#9b9b9b, #6a6a6a); border-color: #444; box-shadow: 0 5px 0 #333, 0 8px 18px rgba(0,0,0,.35); }
+  .btn.orange { background: linear-gradient(#ffc04d, #e8890c); border-color: #9a4f00; box-shadow: 0 5px 0 #7a3c00, 0 8px 18px rgba(0,0,0,.35); }
+  .btn.small { font-size: 15px; padding: 8px 12px; }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+  #crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; transform: translate(-50%, -50%); }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: #fff; mix-blend-mode: difference; }
+  #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; } #crosshair::after { top: 10px; left: 0; height: 2px; width: 22px; }
+  #mineRing { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; transform: translate(-50%, -50%) rotate(-90deg); opacity: 0; }
+  #hotbar { position: absolute; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 4px; padding: 4px;
+    background: rgba(0,0,0,.45); border-radius: 8px; pointer-events: auto; }
+  .slot { position: relative; width: 52px; height: 52px; border: 3px solid rgba(255,255,255,.25); border-radius: 6px; background: rgba(255,255,255,.08);
+    display: flex; align-items: center; justify-content: center; }
+  .slot img { width: 40px; height: 40px; image-rendering: pixelated; }
+  .slot.sel { border-color: #fff; background: rgba(255,255,255,.28); box-shadow: 0 0 0 2px #ffb52e; }
+  .slot .n { position: absolute; right: 3px; bottom: 1px; font-size: 13px; font-weight: 800; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+  .slot .k { position: absolute; left: 3px; top: 0; font-size: 10px; opacity: .7; }
+  .slot.empty img { opacity: .3; filter: grayscale(1); }
+  #blockName { position: absolute; left: 50%; bottom: 82px; transform: translateX(-50%); font-weight: 800; font-size: 16px; text-shadow: 0 2px 3px #000; transition: opacity .4s; }
+  #topbar { position: absolute; left: 10px; top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+  .chip { background: rgba(0,0,0,.45); border-radius: 18px; padding: 6px 12px; font-weight: 800; font-size: 14px; }
+  .iconbtn { background: rgba(0,0,0,.45); border: 0; border-radius: 50%; width: 44px; height: 44px; font-size: 22px; }
+  #topright { position: absolute; right: 10px; top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; pointer-events: auto; }
+  #hint { position: absolute; left: 50%; top: 60%; transform: translateX(-50%); background: rgba(0,0,0,.5); padding: 6px 14px; border-radius: 16px; font-size: 15px; font-weight: 700; }
+  #toasts { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .toast { background: rgba(255,255,255,.92); color: var(--ink); padding: 6px 14px; border-radius: 14px; font-weight: 800; animation: toast 2.6s forwards; }
+  @keyframes toast { 0% { opacity: 0; transform: translateY(-10px); } 10%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+  /* モイン! */
+  #moins { position: fixed; inset: 0; z-index: 12; pointer-events: none; overflow: hidden; }
+  .moin { position: absolute; left: 50%; top: 42%; font-size: clamp(46px, 9vw, 96px); font-weight: 900; color: #ffd23f; white-space: nowrap;
+    text-shadow: 0 4px 0 #b4380a, 0 0 18px rgba(255,120,0,.7), 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000;
+    animation: moin .9s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes moin { 0% { transform: translate(-50%, -50%) scale(.2) rotate(var(--r)); opacity: 0; }
+    25% { transform: translate(-50%, -50%) scale(1.15) rotate(var(--r)); opacity: 1; }
+    70% { transform: translate(calc(-50% + var(--dx)), calc(-50% - 40px)) scale(1) rotate(var(--r)); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% - 90px)) scale(.9) rotate(var(--r)); opacity: 0; } }
+  #flash { position: fixed; inset: 0; z-index: 11; pointer-events: none; background: radial-gradient(circle, rgba(255,210,60,.0) 40%, rgba(255,160,30,.35)); opacity: 0; transition: opacity .25s; }
+
+  /* パネル */
+  .panel { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); padding: 16px; }
+  .card { background: var(--panel); border: 3px solid #6b5a3e; border-radius: 14px; padding: 18px; width: min(560px, 100%); max-height: 88vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .card h2 { margin: 0 0 12px; font-size: 22px; color: var(--accent); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.1); flex-wrap: wrap; }
+  .row label { font-weight: 700; }
+  select, input[type=range] { font: inherit; }
+  select { background: #fff; color: #222; border-radius: 6px; padding: 5px; border: 0; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .note { font-size: 12px; opacity: .75; line-height: 1.6; margin: 6px 0 0; }
+  #invGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+  #invGrid .slot { width: auto; height: 64px; cursor: pointer; }
+  #invGrid .slot .nm { position: absolute; left: 0; right: 0; bottom: -2px; font-size: 9px; text-align: center; opacity: .8; display: none; }
+
+  /* 会話 */
+  #dialog { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 41; width: min(680px, calc(100% - 24px));
+    background: rgba(255, 250, 238, .97); color: var(--ink); border: 4px solid #6b4a24; border-radius: 14px; padding: 14px 18px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  #dialog .who { position: absolute; top: -18px; left: 16px; background: #6b4a24; color: #fff; padding: 3px 14px; border-radius: 12px; font-weight: 800; }
+  #dialog .text { font-size: 18px; line-height: 1.8; min-height: 3.6em; font-weight: 600; }
+  #dialog .choices { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  #dialog .choices button { flex: 1 1 22%; min-width: 70px; font-size: 22px; font-weight: 900; padding: 10px; border-radius: 10px; border: 3px solid #6b4a24; background: #ffe7a8; color: var(--ink); }
+  #dialog .next { text-align: right; font-size: 14px; opacity: .7; margin-top: 4px; }
+
+  /* タッチ */
+  #touch { position: fixed; inset: 0; z-index: 9; }
+  #joy { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.35); display: none; pointer-events: none; }
+  #joy i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px; border-radius: 50%; background: rgba(255,255,255,.55); }
+  #tbtns { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 86px; display: grid; grid-template-columns: repeat(2, 72px); gap: 12px; z-index: 11; }
+  .tb { width: 72px; height: 72px; border-radius: 50%; border: 3px solid rgba(255,255,255,.6); background: rgba(0,0,0,.35); font-size: 32px; display: flex; align-items: center; justify-content: center; }
+  .tb.on { background: rgba(255,180,46,.6); }
+  #tTalk { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: 260px; z-index: 11; width: auto; padding: 0 18px; border-radius: 36px; font-size: 20px; font-weight: 800; background: rgba(255,180,46,.85); color: #222; }
+  #pause { background: rgba(0,0,0,.35); z-index: 25; cursor: pointer; }
+  @media (max-width: 560px) { .slot { width: 38px; height: 38px; } .slot img { width: 28px; height: 28px; } .slot .k { display: none; } #hotbar { gap: 2px; } }
+  @media (max-height: 460px) { #tbtns { bottom: 64px; grid-template-columns: repeat(2, 60px); gap: 8px; } .tb { width: 60px; height: 60px; font-size: 26px; } #tTalk { bottom: 210px; } #dialog { bottom: 60px; } }
+</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="loading" class="screen"><p>モイン島をつくっています……</p></div>
+
+<div id="title" class="screen hide">
+  <h1 class="logo">モインクラフト<small>MOINCRAFT</small></h1>
+  <div class="shout">こわすと「モイン!」</div>
+  <p class="lead">ブロックをこわして、あつめて、好きなものを作ろう。<br>この島には敵はいません。モイン村のやさしい人たちが待っています。</p>
+  <div class="menu">
+    <button class="btn" id="bPlay">はじめる</button>
+    <button class="btn orange hide" id="bNew">あたらしい島で始める</button>
+    <button class="btn gray small" id="bSettings0">せってい(声・音量)</button>
+  </div>
+</div>
+
+<div id="hud" class="hide">
+  <div id="crosshair"></div>
+  <svg id="mineRing" viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="5"/><circle id="mineArc" cx="23" cy="23" r="19" fill="none" stroke="#ffd23f" stroke-width="5" stroke-dasharray="119.4" stroke-dashoffset="119.4" stroke-linecap="round"/></svg>
+  <div id="topbar"><span class="chip" id="moinCount">モイン 0回</span><span class="chip hide" id="modeChip"></span></div>
+  <div id="topright"><button class="iconbtn" id="bInv" title="もちもの (I)">🎒</button><button class="iconbtn" id="bSet" title="せってい (Esc)">⚙️</button></div>
+  <div id="toasts"></div>
+  <div id="hint" class="hide"></div>
+  <div id="blockName"></div>
+  <div id="hotbar"></div>
+</div>
+<div id="moins"></div>
+<div id="flash"></div>
+
+<div id="touch" class="hide">
+  <div id="joy"><i></i></div>
+  <div id="tbtns">
+    <button class="tb" id="tPlace">🧱</button><button class="tb" id="tMine">⛏️</button>
+    <button class="tb" id="tFly">🕊️</button><button class="tb" id="tJump">⤒</button>
+  </div>
+  <button class="tb hide" id="tTalk">💬 はなす</button>
+</div>
+
+<div id="pause" class="screen hide"><div class="card" style="width:auto;text-align:center"><h2>ひとやすみ中</h2><p>画面をクリックすると再開します</p><p class="note">Esc でマウスの固定がはずれます</p><button class="btn gray small" id="pSet">⚙️ せってい</button></div></div>
+
+<div id="dialog" class="hide"><div class="who"></div><div class="text"></div><div class="choices"></div><div class="next">クリック / Space で つぎへ ▶</div></div>
+
+<div id="invPanel" class="panel hide"><div class="card">
+  <h2>🎒 もちもの</h2>
+  <p class="note" style="margin:0 0 10px">ブロックをえらぶと、下のホットバーの選んでいる枠に入ります。</p>
+  <div id="invGrid"></div>
+  <div class="btnrow" style="margin-top:14px;justify-content:flex-end"><button class="btn small" id="invClose">とじる</button></div>
+</div></div>
+
+<div id="setPanel" class="panel hide"><div class="card">
+  <h2>⚙️ せってい</h2>
+  <div class="row"><label for="sVoice">「モイン!」の声</label>
+    <select id="sVoice"><option value="auto">おまかせ</option><option value="speech">端末の読み上げ声</option><option value="synth">モイン合成ボイス</option><option value="rec">録音した自分の声</option></select></div>
+  <div class="row"><label for="sVol">声の大きさ</label><input type="range" id="sVol" min="0" max="2" step="0.05"></div>
+  <div class="row" style="display:block"><label>自分の声で「モイン!」</label>
+    <div class="btnrow" style="margin-top:8px"><button class="btn orange small" id="sRec">🎙️ 録音する(1.6秒)</button><button class="btn small" id="sTest">▶ ためす</button><button class="btn gray small" id="sRecDel">けす</button></div>
+    <p class="note" id="sRecNote">録音すると、こわすたびにあなたの声で叫びます(声はこの端末の中だけに保存されます)。</p></div>
+  <div class="row"><label for="sCreative">クリエイティブ(ブロック無限・すばやく採掘)</label><input type="checkbox" id="sCreative"></div>
+  <div class="row"><label for="sSens">視点の感度</label><input type="range" id="sSens" min="0.3" max="2.5" step="0.05"></div>
+  <div class="row"><label for="sDist">見える距離</label><select id="sDist"><option value="60">近い(軽い)</option><option value="90">ふつう</option><option value="130">遠い</option></select></div>
+  <div class="btnrow" style="margin-top:14px;justify-content:space-between">
+    <button class="btn gray small" id="sTitle">タイトルへ(保存)</button><button class="btn small" id="setClose">ゲームにもどる</button></div>
+  <p class="note">PC: WASD 移動 / Space ジャンプ / Shift ダッシュ / F 飛ぶ(飛行中は Space 上昇・Shift 下降)/ 左クリック長押し こわす / 右クリック 置く / 1〜9・ホイール ブロック選択 / E はなす / I もちもの</p>
+</div></div>
+
+<script type="module" src="./js/main.js"></script>
+<script>
+  // モジュールが読めない古いブラウザ向けの表示
+  window.addEventListener('error', e => { const l = document.getElementById('loading'); if (l && !l.classList.contains('hide')) l.innerHTML = '<p>読み込みに失敗しました</p><pre>' + (e.message || e) + '</pre>'; });
+</script>
+</body>
+</html>
