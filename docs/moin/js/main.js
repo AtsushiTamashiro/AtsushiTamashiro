@@ -6,6 +6,8 @@ import { World, buildChunkGeometry, SX, SZ, SY, CH, LIGHT_BOOST } from './world.
 import { moveBody, collides, inWater } from './physics.js';
 import { NPC, NPC_DEFS } from './npc.js';
 import { MoinVoice } from './moin.js';
+import { RealVoice } from './realvoice.js';
+import { realFace } from './realface.js';
 
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'moincraft-save-v1', SET_KEY = 'moincraft-settings-v1';
@@ -15,7 +17,7 @@ const REACH = 6;
 const JUMP_V = 10.9; // 重力26 → 約2.3ブロックの高さ(2段の壁を越えられる)
 
 // ---- 設定 ----
-const settings = Object.assign({ voice: 'auto', vol: 1, creative: false, variety: true, sens: 1, dist: isTouch ? 60 : 90 }, load(SET_KEY) || {});
+const settings = Object.assign({ voice: 'auto', vol: 1, creative: false, variety: true, faceZoom: 1.3, faceDx: 0, faceDy: 0, sens: 1, dist: isTouch ? 60 : 90 }, load(SET_KEY) || {});
 function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
 function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
@@ -59,6 +61,7 @@ const stars = (() => {
 let world, chunks = new Map(), npcs = [], state = 'loading';
 const player = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), w: 0.3, h: 1.75, yaw: 0, pitch: 0, onGround: false, fly: false, stepT: 0 };
 let inv = {}, hotbar = [], sel = 0, flags = {}, moinCount = 0, dayTime = 0.3;
+const realVoice = new RealVoice(() => settings.vol);
 const voice = new MoinVoice(); voice.mode = settings.voice; voice.variety = settings.variety; voice.setVolume(settings.vol);
 
 function newGameState() {
@@ -89,7 +92,9 @@ function spawnNPCs() {
     const h = world.houses[i % world.houses.length];
     const home = { x: h.door.x, y: world.topY(Math.floor(h.door.x), Math.floor(h.door.z)) + 1, z: h.door.z, cx: c.x + 0.5, cz: c.z + 0.5 };
     if (def.key === 'chief') { home.x = c.x + 3.5; home.z = c.z + 4.5; home.y = c.y + 1; }
+    if (def.key === 'oyaji') { home.x = c.x - 4.5; home.z = c.z + 4.5; home.y = world.topY(Math.floor(home.x), Math.floor(home.z)) + 1; }
     const n = new NPC(def, world, home); npcs.push(n); scene.add(n.group);
+    if (def.greet) n.greetCB = () => { n.sayMoin(2.2); realVoice.say(def.greet.say, def.greet.k); };
   });
 }
 
@@ -198,7 +203,7 @@ function moinFx() {
   const f = $('flash'); f.style.opacity = 1; setTimeout(() => f.style.opacity = 0, 90);
   shake = fx.shake;
   // 近くの村人もつられて「モイン!」
-  for (const n of npcs) if (n.pos.distanceTo(player.pos) < 9) setTimeout(() => n.sayMoin(1.4), 150 + Math.random() * 500);
+  for (const n of npcs) if (!n.def.real && n.pos.distanceTo(player.pos) < 9) setTimeout(() => n.sayMoin(1.4), 150 + Math.random() * 500);
   if (moinCount === 1) toast('はじめての「モイン!」');
   if (moinCount % 100 === 0) { toast(`モイン ${moinCount}回 たっせい!`); voice.fanfare(); }
 }
@@ -256,7 +261,7 @@ $('bSettings0').addEventListener('click', openSettings);
 for (const p of ['invPanel', 'setPanel']) $(p).addEventListener('pointerdown', e => { if (e.target.id === p) closePanels(); });
 
 function openSettings() {
-  $('sVoice').value = settings.voice; $('sVol').value = settings.vol; $('sCreative').checked = settings.creative; $('sVariety').checked = settings.variety;
+  $('sVoice').value = settings.voice; $('sVol').value = settings.vol; $('sCreative').checked = settings.creative; $('sFaceZoom').value = settings.faceZoom; $('sFaceDx').value = settings.faceDx; $('sFaceDy').value = settings.faceDy; updateFaceNote(); $('sVariety').checked = settings.variety;
   $('sSens').value = settings.sens; $('sDist').value = String(settings.dist);
   $('sTitle').classList.toggle('hide', state === 'title'); $('setClose').textContent = state === 'title' ? 'とじる' : 'ゲームにもどる';
   updateRecNote();
@@ -267,6 +272,16 @@ $('sVoice').addEventListener('change', e => { settings.voice = voice.mode = e.ta
 $('sVol').addEventListener('input', e => { settings.vol = +e.target.value; voice.setVolume(settings.vol); store(SET_KEY, settings); });
 $('sVol').addEventListener('change', () => { voice.unlock(); voice.shout(); });
 $('sVariety').addEventListener('change', e => { settings.variety = voice.variety = e.target.checked; store(SET_KEY, settings); });
+// リアルおじさんの顔写真(この端末の中だけに保存)
+realFace.init(settings.faceZoom, settings.faceDx, settings.faceDy);
+function updateFaceNote() { $('sFaceNote').textContent = realFace.hasPhoto ? '顔写真を設定ずみ。下のスライダーで顔の大きさと位置を合わせてね。' : '写真は未設定(仮の描き顔)。顔が大きく正面から写った写真がおすすめ。'; }
+realFace.onChange = updateFaceNote;
+$('sFaceBtn').addEventListener('click', () => $('sFaceFile').click());
+$('sFaceFile').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { await realFace.setFile(f); } catch (err) { $('sFaceNote').textContent = '画像を読みこめませんでした。'; } });
+$('sFaceDel').addEventListener('click', () => realFace.clear());
+for (const [id, key] of [['sFaceZoom', 'faceZoom'], ['sFaceDx', 'faceDx'], ['sFaceDy', 'faceDy']])
+  $(id).addEventListener('input', e => { settings[key] = +e.target.value; realFace.zoom = settings.faceZoom; realFace.dx = settings.faceDx; realFace.dy = settings.faceDy; realFace.redraw(); store(SET_KEY, settings); });
+$('sFaceTalk').addEventListener('click', () => { realVoice.say('おう！元気か！？', 'genki'); });
 $('sCreative').addEventListener('change', e => { settings.creative = e.target.checked; store(SET_KEY, settings); refreshHotbar(); });
 $('sSens').addEventListener('input', e => { settings.sens = +e.target.value; store(SET_KEY, settings); });
 $('sDist').addEventListener('change', e => { settings.dist = +e.target.value; store(SET_KEY, settings); });
@@ -301,6 +316,7 @@ function showStep() {
   const s = typeof step === 'string' ? { text: step } : step;
   if (s.run && !s._done) { s._done = true; s.run(); }
   $('dialog').querySelector('.text').textContent = s.text;
+  if (dlg.npc.def.real) realVoice.say(s.say || s.text, s.k);
   const ch = $('dialog').querySelector('.choices'); ch.innerHTML = '';
   $('dialog').querySelector('.next').classList.toggle('hide', !!s.choices);
   if (s.choices) s.choices.forEach((c, k) => {
@@ -316,7 +332,7 @@ function chooseOpt(k) {
 }
 function advance() { const s = dlg.steps[dlg.i]; if (s?.choices) return; dlg.i++; showStep(); }
 function endTalk() {
-  if (dlg) dlg.npc.talking = false; dlg = null;
+  if (dlg) { dlg.npc.talking = false; if (dlg.npc.def.real) realVoice.stop(); } dlg = null;
   $('dialog').classList.add('hide');
   state = 'play'; requestLock();
 }
