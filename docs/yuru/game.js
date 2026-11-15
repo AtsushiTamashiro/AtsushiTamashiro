@@ -44,53 +44,8 @@
   const tyChip = t => `<span class="ty" style="--tc:${TYPES[t].c}">${TYPES[t].i}${TYPES[t].n}</span>`;
   document.addEventListener('pointerdown', () => A.init(), { capture: true });
 
-  // ---------------- character art ----------------
-  let uid = 0;
-  function charaSVG(c, o = {}) {
-    const body = c.col, acc = c.acc, dark = mix(body, INK, 0.18), belly = mix(body, '#FFFFFF', 0.55), inner = '#FFB7CC';
-    const sil = []; // 輪郭をつくる形 [svg, fill]
-    const deco = []; // 輪郭の上に描く飾り
-    const E = (cx, cy, rx, ry, f, rot) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${f}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
-    let bow = [152, 44];
-    switch (c.ear) {
-      case 'bear': sil.push(E(48, 50, 21, 21, body), E(152, 50, 21, 21, body)); deco.push(E(48, 52, 11, 11, inner), E(152, 52, 11, 11, inner)); bow = [160, 36]; break;
-      case 'cat': sil.push(`<path d="M38 74 Q34 30 50 20 Q66 30 88 44 Z" fill="${body}"/>`, `<path d="M162 74 Q166 30 150 20 Q134 30 112 44 Z" fill="${body}"/>`);
-        deco.push(`<path d="M48 60 Q47 38 54 32 Q64 40 74 46 Z" fill="${inner}"/>`, `<path d="M152 60 Q153 38 146 32 Q136 40 126 46 Z" fill="${inner}"/>`); bow = [150, 30]; break;
-      case 'bunny': sil.push(E(72, 26, 14, 36, body, -12), E(128, 26, 14, 36, body, 12)); deco.push(E(72, 28, 7, 26, inner, -12), E(128, 28, 7, 26, inner, 12)); bow = [134, 52]; break;
-      case 'dog': sil.push(E(36, 86, 17, 32, dark, 18), E(164, 86, 17, 32, dark, -18)); bow = [146, 38]; break;
-      case 'round': sil.push(E(56, 42, 13, 13, body), E(144, 42, 13, 13, body)); bow = [150, 36]; break;
-      case 'leaf': sil.push(`<path d="M100 38 Q96 22 102 12" stroke="#7A5A3A" stroke-width="5" fill="none" stroke-linecap="round"/>`, `<path d="M102 18 Q126 0 142 14 Q124 32 102 18 Z" fill="#8EDB7F"/>`); bow = [56, 46]; break;
-      case 'dino': sil.push(`<path d="M70 40 L80 14 L92 36 Z" fill="${acc}"/>`, `<path d="M90 36 L102 6 L114 36 Z" fill="${acc}"/>`, `<path d="M110 36 L122 14 L132 40 Z" fill="${acc}"/>`); bow = [156, 52]; break;
-      case 'deer': sil.push(`<path d="M62 44 Q50 20 56 6 M56 24 Q42 18 38 8 M138 44 Q150 20 144 6 M144 24 Q158 18 162 8" stroke="#C79565" stroke-width="7" fill="none" stroke-linecap="round"/>`, E(40, 66, 16, 10, body, -20), E(160, 66, 16, 10, body, 20)); bow = [146, 40]; break;
-      case 'horn': sil.push(`<path d="M58 46 Q52 22 64 10 Q70 30 80 38 Z" fill="${acc === INK ? '#FFE58A' : acc}"/>`, `<path d="M142 46 Q148 22 136 10 Q130 30 120 38 Z" fill="${acc === INK ? '#FFE58A' : acc}"/>`); bow = null; break;
-      case 'oni': sil.push(`<path d="M64 42 L70 8 L86 36 Z" fill="#FFE58A"/>`, `<path d="M136 42 L130 8 L114 36 Z" fill="#FFE58A"/>`); bow = null; break;
-      case 'fin': sil.push(`<path d="M74 38 Q100 0 130 36 Z" fill="${acc}"/>`, E(26, 104, 14, 9, acc, -25), E(174, 104, 14, 9, acc, 25)); bow = [64, 44]; break;
-    }
-    sil.push(E(80, 182, 17, 10, body), E(120, 182, 17, 10, body)); // feet
-    sil.push(E(100, 152, 46, 36, body)); // body
-    sil.push(E(54, 146, 12, 17, body, 35), E(146, 146, 12, 17, body, -35)); // arms
-    sil.push(E(100, 94, 72, 60, body)); // head
-    const outline = sil.map(s => /stroke=/.test(s)
-      ? s.replace(/stroke="[^"]*"/, `stroke="${INK}"`).replace(/stroke-width="(\d+)"/, (m, w) => `stroke-width="${+w + 8}"`)
-      : s.replace(/fill="[^"]*"/, `fill="${INK}"`).replace('/>', ` stroke="${INK}" stroke-width="9" stroke-linejoin="round"/>`)).join('');
-    const fills = sil.join('');
-    deco.push(E(100, 160, 27, 21, belly));
-    if (c.ear === 'dog' || c.ear === 'bear' || c.ear === 'deer') deco.push(E(100, 110, 5, 3.6, INK));
-    // face
-    const f = c.face || 0, ex = [76, 124], ey = 100;
-    let eyes = '';
-    if (f === 1) eyes = ex.map(x => `<path d="M${x - 8} ${ey + 2} Q${x} ${ey - 9} ${x + 8} ${ey + 2}" stroke="${INK}" stroke-width="4.5" fill="none" stroke-linecap="round"/>`).join('');
-    else eyes = ex.map(x => `<ellipse cx="${x}" cy="${ey}" rx="7" ry="9.5" fill="${INK}"/><circle cx="${x - 2.5}" cy="${ey - 3.5}" r="3" fill="#fff"/><circle cx="${x + 2.5}" cy="${ey + 3}" r="1.3" fill="#fff"/>`).join('');
-    const blush = `<ellipse cx="58" cy="117" rx="12" ry="7" fill="#FF8FB1" opacity=".55"/><ellipse cx="142" cy="117" rx="12" ry="7" fill="#FF8FB1" opacity=".55"/>`;
-    const mouth = f === 2
-      ? `<path d="M92 114 Q96 120 100 114 Q104 120 108 114" stroke="${INK}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
-      : `<path d="M92 115 Q100 125 108 115 Q100 118 92 115 Z" fill="#FF7B8C" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>`;
-    const bowSvg = bow ? `<g transform="translate(${bow[0]} ${bow[1]}) rotate(18)"><path d="M0 0 Q-20 -16 -22 0 Q-20 16 0 0 Z M0 0 Q20 -16 22 0 Q20 16 0 0 Z" fill="${acc === '#FFFFFF' ? '#FF7BA9' : acc}" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"/><circle r="5.5" fill="${acc === '#FFFFFF' ? '#FF7BA9' : acc}" stroke="${INK}" stroke-width="3.5"/></g>` : '';
-    const item = `<g transform="translate(152 158) rotate(-10)"><circle r="21" fill="#fff" stroke="${INK}" stroke-width="3.5"/><text y="9" font-size="25" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">${c.emoji}</text></g>`;
-    const shadow = o.noShadow ? '' : `<ellipse cx="100" cy="196" rx="62" ry="7" fill="${INK}" opacity=".12"/>`;
-    const cls = o.silhouette ? ' style="filter:brightness(0) opacity(.18)"' : '';
-    return `<svg viewBox="0 -12 200 214" xmlns="http://www.w3.org/2000/svg" aria-label="${esc(c.name)}"${cls}>${shadow}<g>${outline}</g><g>${fills}</g>${deco.join('')}${eyes}${blush}${mouth}${bowSvg}${item}</svg>`;
-  }
+  // ---------------- character art (art.js) ----------------
+  const charaSVG = window.YuruArt.charaSVG;
 
   // ---------------- screens ----------------
   function show(el) { app.innerHTML = ''; app.appendChild(el); }
