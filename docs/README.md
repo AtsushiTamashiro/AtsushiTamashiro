@@ -62,3 +62,16 @@
 - HTML / CSS / Vanilla JavaScript(ビルド不要)
 - [Leaflet](https://leafletjs.com/) 1.9.4(`vendor/leaflet/` に同梱)+ OpenStreetMap タイル
 - Firebase Realtime Database(オプション)
+
+---
+
+# 🎀 ゆるっと!ご当地バトル(`yuru/`)
+
+47都道府県のオリジナルご当地ゆるキャラが戦うバトルゲーム。
+`docs/yuru/index.html` をブラウザで開くと遊べます(GitHub Pages: `/yuru/`)。
+
+- パートナーを1体えらび、各県のキャラと4つの技でたたかう(タイプ相性・能力アップ/ダウン・回復あり)
+- 勝つとその県のご当地カードがもらえる。47枚そろえると「せかい大会」(海外キャラ5体)が解放
+- BGM・効果音は Web Audio でその場で合成(通常曲/テンポの速いバトル曲)
+- 進行状況はブラウザ(localStorage)に保存
+- キャラクターデータは `yuru/data.js`、音は `yuru/audio.js`、ゲーム本体は `yuru/game.js`
