@@ -228,8 +228,11 @@ async function play(ch) {
   while (id === runId) {
     drawGuide();
     $('caption').textContent = `${total}かく で かくよ`;
-    const strokes = el('g', {fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': 5.5}, svg);
-    const badges = el('g', {}, svg);
+    // フェードはこの周回の描画グループだけにかける(途中でボタンを押しても消えたままにならない)
+    const layer = el('g', {}, svg);
+    layer.style.transition = 'opacity .4s';
+    const strokes = el('g', {fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': 5.5}, layer);
+    const badges = el('g', {}, layer);
     const tip = el('circle', {r: 3.4, fill: '#2B2340', opacity: 0}, svg);
     await wait(700);
     for (let i = 0; i < total && id === runId; i++) {
@@ -260,9 +263,8 @@ async function play(ch) {
     $('caption').textContent = 'できた！ 🎉';
     await wait(2200);
     if (id !== runId) return;
-    svg.style.transition = 'opacity .4s'; svg.style.opacity = 0;
+    layer.style.opacity = 0;
     await wait(450);
-    svg.style.opacity = 1;
   }
 }
 
@@ -293,6 +295,7 @@ $('say').onclick = () => speak(current);
 $('slow').onclick = () => {
   slow = !slow;
   $('slow').setAttribute('aria-pressed', slow);
+  $('slow').textContent = slow ? '🐢 ゆっくり' : '🐇 ふつう';
   play(current);
 };
 document.addEventListener('keydown', e => {
