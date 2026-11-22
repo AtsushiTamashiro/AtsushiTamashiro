@@ -1,6 +1,6 @@
 // Keeps ひらがな かきかた playable offline (e.g. a Fire tablet in the car).
 // Network first so updates arrive; the cached copy is used only when offline.
-const CACHE = 'hiragana-v2';
+const CACHE = 'hiragana-v3';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', 'strokes.js'])).then(() => self.skipWaiting()));
